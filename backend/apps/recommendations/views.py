@@ -1,8 +1,19 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from services.google_places import google_places_service
 import random
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Try to import the Google Places service, but provide fallback if it fails
+try:
+    from services.google_places import google_places_service
+    GOOGLE_PLACES_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Google Places service not available: {e}")
+    GOOGLE_PLACES_AVAILABLE = False
+    google_places_service = None
 
 
 class RecommendationsView(generics.GenericAPIView):

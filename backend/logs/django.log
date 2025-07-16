@@ -94,3 +94,21 @@ WARNING 2025-07-16 17:03:00,011 log 73144 6211645440 Unauthorized: /api/trips/
 WARNING 2025-07-16 17:03:00,012 basehttp 73144 6211645440 "GET /api/trips/ HTTP/1.1" 401 172
 INFO 2025-07-16 17:04:09,028 basehttp 73144 6228471808 "GET /api/trips/ HTTP/1.1" 200 447
 INFO 2025-07-16 17:04:25,928 basehttp 73144 6228471808 "GET /api/trips/1/ HTTP/1.1" 200 466
+ERROR 2025-07-16 17:06:50,260 log 73144 6245298176 Internal Server Error: /api/places/search/
+ERROR 2025-07-16 17:06:50,261 basehttp 73144 6245298176 "GET /api/places/search/?q=restaurants%20in%20san%20francisco HTTP/1.1" 500 70
+INFO 2025-07-16 17:07:21,464 basehttp 73144 6245298176 "GET /api/weather/current/?lat=37.7749&lng=-122.4194 HTTP/1.1" 200 186
+INFO 2025-07-16 17:07:30,721 basehttp 73144 6245298176 "GET /api/weather/forecast/?stops=[{%22latitude%22:%2037.7749,%20%22longitude%22:%20-122.4194},%20{%22latitude%22:%2037.8199,%20%22longitude%22:%20-122.4783}] HTTP/1.1" 200 16
+ERROR 2025-07-16 17:07:39,199 log 73144 6245298176 Internal Server Error: /api/recommendations/
+ERROR 2025-07-16 17:07:39,199 basehttp 73144 6245298176 "GET /api/recommendations/?lat=37.7749&lng=-122.4194 HTTP/1.1" 500 70
+INFO 2025-07-16 17:11:15,200 autoreload 73144 8797069056 /Users/braddr/Documents/Code/Personal Projects/roadTrip_planner/backend/apps/places/views.py changed, reloading.
+INFO 2025-07-16 17:11:16,518 autoreload 84376 8797069056 Watching for file changes with StatReloader
+INFO 2025-07-16 17:12:55,411 autoreload 84376 8797069056 /Users/braddr/Documents/Code/Personal Projects/roadTrip_planner/backend/apps/places/views.py changed, reloading.
+INFO 2025-07-16 17:12:57,007 autoreload 84782 8797069056 Watching for file changes with StatReloader
+INFO 2025-07-16 17:14:28,239 autoreload 84782 8797069056 /Users/braddr/Documents/Code/Personal Projects/roadTrip_planner/backend/apps/places/views.py changed, reloading.
+INFO 2025-07-16 17:14:29,526 autoreload 85009 8797069056 Watching for file changes with StatReloader
+INFO 2025-07-16 17:15:55,159 autoreload 85009 8797069056 /Users/braddr/Documents/Code/Personal Projects/roadTrip_planner/backend/apps/places/views.py changed, reloading.
+INFO 2025-07-16 17:15:56,163 autoreload 85300 8797069056 Watching for file changes with StatReloader
+INFO 2025-07-16 17:17:12,997 autoreload 85300 8797069056 /Users/braddr/Documents/Code/Personal Projects/roadTrip_planner/backend/apps/recommendations/views.py changed, reloading.
+INFO 2025-07-16 17:17:14,495 autoreload 85484 8797069056 Watching for file changes with StatReloader
+WARNING 2025-07-16 17:31:56,628 views 85484 6132133888 Google Places API failed: Error 61 connecting to 127.0.0.1:6379. Connection refused.
+INFO 2025-07-16 17:31:56,630 basehttp 85484 6132133888 "GET /api/places/search/?q=restaurants%20in%20san%20francisco HTTP/1.1" 200 950
