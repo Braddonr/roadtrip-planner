@@ -112,3 +112,238 @@ INFO 2025-07-16 17:17:12,997 autoreload 85300 8797069056 /Users/braddr/Documents
 INFO 2025-07-16 17:17:14,495 autoreload 85484 8797069056 Watching for file changes with StatReloader
 WARNING 2025-07-16 17:31:56,628 views 85484 6132133888 Google Places API failed: Error 61 connecting to 127.0.0.1:6379. Connection refused.
 INFO 2025-07-16 17:31:56,630 basehttp 85484 6132133888 "GET /api/places/search/?q=restaurants%20in%20san%20francisco HTTP/1.1" 200 950
+INFO 2025-07-16 17:46:06,579 autoreload 92226 8797069056 Watching for file changes with StatReloader
+WARNING 2025-07-16 17:46:06,768 google_places 92226 8797069056 Google Maps API key not configured
+WARNING 2025-07-16 18:00:20,939 log 92226 6197964800 Unauthorized: /api/weather/current/
+WARNING 2025-07-16 18:00:20,940 log 92226 6214791168 Unauthorized: /api/recommendations/
+WARNING 2025-07-16 18:00:20,942 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 401 58
+WARNING 2025-07-16 18:00:20,943 basehttp 92226 6214791168 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 401 58
+WARNING 2025-07-16 18:01:22,038 log 92226 6197964800 Unauthorized: /api/weather/current/
+WARNING 2025-07-16 18:01:22,040 log 92226 6214791168 Unauthorized: /api/recommendations/
+WARNING 2025-07-16 18:01:22,041 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 401 58
+WARNING 2025-07-16 18:01:22,042 basehttp 92226 6214791168 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 401 58
+WARNING 2025-07-16 18:01:22,043 log 92226 6197964800 Unauthorized: /api/weather/current/
+WARNING 2025-07-16 18:01:22,046 log 92226 6231617536 Unauthorized: /api/recommendations/
+WARNING 2025-07-16 18:01:22,047 basehttp 92226 6231617536 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 401 58
+WARNING 2025-07-16 18:01:22,050 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 401 58
+WARNING 2025-07-16 18:01:55,628 log 92226 6197964800 Unauthorized: /api/weather/current/
+WARNING 2025-07-16 18:01:55,630 log 92226 6214791168 Unauthorized: /api/recommendations/
+WARNING 2025-07-16 18:01:55,631 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 401 58
+WARNING 2025-07-16 18:01:55,632 basehttp 92226 6214791168 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 401 58
+WARNING 2025-07-16 18:01:55,636 log 92226 6231617536 Unauthorized: /api/recommendations/
+WARNING 2025-07-16 18:01:55,640 log 92226 6197964800 Unauthorized: /api/weather/current/
+WARNING 2025-07-16 18:01:55,642 basehttp 92226 6231617536 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 401 58
+WARNING 2025-07-16 18:01:55,643 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 401 58
+WARNING 2025-07-16 18:02:13,657 log 92226 6197964800 Unauthorized: /api/weather/current/
+WARNING 2025-07-16 18:02:13,658 log 92226 6214791168 Unauthorized: /api/recommendations/
+WARNING 2025-07-16 18:02:13,664 basehttp 92226 6214791168 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 401 58
+WARNING 2025-07-16 18:02:13,663 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 401 58
+WARNING 2025-07-16 18:02:13,668 log 92226 6197964800 Unauthorized: /api/recommendations/
+WARNING 2025-07-16 18:02:13,664 log 92226 6231617536 Unauthorized: /api/weather/current/
+WARNING 2025-07-16 18:02:13,672 basehttp 92226 6197964800 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 401 58
+WARNING 2025-07-16 18:02:13,673 basehttp 92226 6231617536 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 401 58
+WARNING 2025-07-16 18:02:50,283 log 92226 6197964800 Unauthorized: /api/weather/current/
+WARNING 2025-07-16 18:02:50,285 log 92226 6214791168 Unauthorized: /api/recommendations/
+WARNING 2025-07-16 18:02:50,285 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 401 58
+WARNING 2025-07-16 18:02:50,290 log 92226 6197964800 Unauthorized: /api/weather/current/
+WARNING 2025-07-16 18:02:50,291 log 92226 6231617536 Unauthorized: /api/recommendations/
+WARNING 2025-07-16 18:02:50,291 basehttp 92226 6214791168 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 401 58
+WARNING 2025-07-16 18:02:50,293 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 401 58
+WARNING 2025-07-16 18:02:50,292 basehttp 92226 6231617536 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 401 58
+INFO 2025-07-16 18:04:28,515 basehttp 92226 6197964800 "OPTIONS /api/auth/login/ HTTP/1.1" 200 0
+INFO 2025-07-16 18:04:29,018 basehttp 92226 6197964800 "POST /api/auth/login/ HTTP/1.1" 200 854
+INFO 2025-07-16 18:04:29,088 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 191
+ERROR 2025-07-16 18:04:29,089 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:04:29,089 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:04:29,090 google_places 92226 6214791168 Google Places API key not configured
+INFO 2025-07-16 18:04:29,095 basehttp 92226 6214791168 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 55
+INFO 2025-07-16 18:04:29,105 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 184
+ERROR 2025-07-16 18:04:29,108 google_places 92226 6231617536 Google Places API key not configured
+ERROR 2025-07-16 18:04:29,108 google_places 92226 6231617536 Google Places API key not configured
+ERROR 2025-07-16 18:04:29,108 google_places 92226 6231617536 Google Places API key not configured
+INFO 2025-07-16 18:04:29,109 basehttp 92226 6231617536 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 55
+INFO 2025-07-16 18:04:46,368 basehttp 92226 6197964800 "OPTIONS /api/places/search/?q=Nairobi HTTP/1.1" 200 0
+ERROR 2025-07-16 18:04:46,373 google_places 92226 6197964800 Google Places API key not configured
+INFO 2025-07-16 18:04:46,375 basehttp 92226 6197964800 "GET /api/places/search/?q=Nairobi HTTP/1.1" 200 825
+ERROR 2025-07-16 18:06:18,962 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:06:18,963 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:06:18,963 google_places 92226 6214791168 Google Places API key not configured
+INFO 2025-07-16 18:06:18,965 basehttp 92226 6214791168 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 55
+INFO 2025-07-16 18:06:18,976 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 190
+INFO 2025-07-16 18:06:39,136 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 183
+ERROR 2025-07-16 18:06:39,137 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:06:39,137 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:06:39,138 google_places 92226 6214791168 Google Places API key not configured
+INFO 2025-07-16 18:06:39,139 basehttp 92226 6214791168 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 55
+INFO 2025-07-16 18:06:39,144 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 191
+ERROR 2025-07-16 18:06:39,145 google_places 92226 6231617536 Google Places API key not configured
+ERROR 2025-07-16 18:06:39,145 google_places 92226 6231617536 Google Places API key not configured
+ERROR 2025-07-16 18:06:39,145 google_places 92226 6231617536 Google Places API key not configured
+INFO 2025-07-16 18:06:39,146 basehttp 92226 6231617536 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 55
+INFO 2025-07-16 18:07:45,584 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 184
+ERROR 2025-07-16 18:07:45,588 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:07:45,594 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:07:45,595 google_places 92226 6214791168 Google Places API key not configured
+INFO 2025-07-16 18:07:45,598 basehttp 92226 6214791168 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 55
+INFO 2025-07-16 18:07:45,605 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 186
+ERROR 2025-07-16 18:07:45,638 google_places 92226 6231617536 Google Places API key not configured
+ERROR 2025-07-16 18:07:45,639 google_places 92226 6231617536 Google Places API key not configured
+ERROR 2025-07-16 18:07:45,639 google_places 92226 6231617536 Google Places API key not configured
+INFO 2025-07-16 18:07:45,640 basehttp 92226 6231617536 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 55
+INFO 2025-07-16 18:08:53,160 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 184
+ERROR 2025-07-16 18:08:53,162 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:08:53,165 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:08:53,165 google_places 92226 6214791168 Google Places API key not configured
+INFO 2025-07-16 18:08:53,166 basehttp 92226 6214791168 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 55
+INFO 2025-07-16 18:09:03,605 basehttp 92226 6197964800 "OPTIONS /api/auth/logout/ HTTP/1.1" 200 0
+WARNING 2025-07-16 18:09:03,614 log 92226 6197964800 Bad Request: /api/auth/logout/
+WARNING 2025-07-16 18:09:03,615 basehttp 92226 6197964800 "POST /api/auth/logout/ HTTP/1.1" 400 26
+INFO 2025-07-16 18:09:08,631 basehttp 92226 6197964800 "POST /api/auth/login/ HTTP/1.1" 200 854
+ERROR 2025-07-16 18:09:08,702 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:09:08,702 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:09:08,702 google_places 92226 6214791168 Google Places API key not configured
+INFO 2025-07-16 18:09:08,703 basehttp 92226 6214791168 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 55
+INFO 2025-07-16 18:09:08,707 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 191
+ERROR 2025-07-16 18:09:08,711 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:09:08,711 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:09:08,711 google_places 92226 6214791168 Google Places API key not configured
+INFO 2025-07-16 18:09:08,712 basehttp 92226 6214791168 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 55
+INFO 2025-07-16 18:09:08,716 basehttp 92226 6231617536 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 183
+WARNING 2025-07-16 18:09:53,852 log 92226 6197964800 Bad Request: /api/auth/logout/
+WARNING 2025-07-16 18:09:53,853 basehttp 92226 6197964800 "POST /api/auth/logout/ HTTP/1.1" 400 26
+INFO 2025-07-16 18:10:48,060 basehttp 92226 6197964800 "OPTIONS /api/auth/register/ HTTP/1.1" 200 0
+INFO 2025-07-16 18:10:48,508 basehttp 92226 6197964800 "POST /api/auth/register/ HTTP/1.1" 201 858
+ERROR 2025-07-16 18:10:48,581 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:10:48,582 google_places 92226 6214791168 Google Places API key not configured
+INFO 2025-07-16 18:10:48,583 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 185
+ERROR 2025-07-16 18:10:48,584 google_places 92226 6214791168 Google Places API key not configured
+INFO 2025-07-16 18:10:48,589 basehttp 92226 6214791168 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 55
+ERROR 2025-07-16 18:10:48,615 google_places 92226 6231617536 Google Places API key not configured
+ERROR 2025-07-16 18:10:48,615 google_places 92226 6231617536 Google Places API key not configured
+ERROR 2025-07-16 18:10:48,616 google_places 92226 6231617536 Google Places API key not configured
+INFO 2025-07-16 18:10:48,616 basehttp 92226 6231617536 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 55
+INFO 2025-07-16 18:10:48,618 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 184
+WARNING 2025-07-16 18:11:33,271 log 92226 6197964800 Bad Request: /api/auth/logout/
+WARNING 2025-07-16 18:11:33,272 basehttp 92226 6197964800 "POST /api/auth/logout/ HTTP/1.1" 400 26
+INFO 2025-07-16 18:11:41,846 basehttp 92226 6197964800 "POST /api/auth/login/ HTTP/1.1" 200 858
+ERROR 2025-07-16 18:11:41,916 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:11:41,916 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:11:41,917 google_places 92226 6214791168 Google Places API key not configured
+INFO 2025-07-16 18:11:41,918 basehttp 92226 6214791168 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 55
+INFO 2025-07-16 18:11:41,922 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 191
+INFO 2025-07-16 18:11:41,927 basehttp 92226 6231617536 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 182
+ERROR 2025-07-16 18:11:41,929 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:11:41,929 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:11:41,929 google_places 92226 6214791168 Google Places API key not configured
+INFO 2025-07-16 18:11:41,936 basehttp 92226 6214791168 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 55
+INFO 2025-07-16 18:12:05,941 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 190
+ERROR 2025-07-16 18:12:05,942 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:12:05,943 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:12:05,943 google_places 92226 6214791168 Google Places API key not configured
+INFO 2025-07-16 18:12:05,944 basehttp 92226 6214791168 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 55
+ERROR 2025-07-16 18:12:37,826 google_places 92226 6214791168 Google Places API key not configured
+INFO 2025-07-16 18:12:37,827 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 186
+ERROR 2025-07-16 18:12:37,827 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:12:37,831 google_places 92226 6214791168 Google Places API key not configured
+INFO 2025-07-16 18:12:37,837 basehttp 92226 6214791168 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 55
+INFO 2025-07-16 18:12:37,868 basehttp 92226 6197964800 "GET /api/weather/current/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 185
+ERROR 2025-07-16 18:12:37,868 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:12:37,868 google_places 92226 6214791168 Google Places API key not configured
+ERROR 2025-07-16 18:12:37,868 google_places 92226 6214791168 Google Places API key not configured
+INFO 2025-07-16 18:12:37,869 basehttp 92226 6214791168 "GET /api/recommendations/?lat=40.7128&lng=-74.006 HTTP/1.1" 200 55
+INFO 2025-07-16 18:12:48,070 basehttp 92226 6197964800 "OPTIONS /api/places/search/?q=nnd HTTP/1.1" 200 0
+ERROR 2025-07-16 18:12:48,075 google_places 92226 6197964800 Google Places API key not configured
+INFO 2025-07-16 18:12:48,075 basehttp 92226 6197964800 "GET /api/places/search/?q=nnd HTTP/1.1" 200 803
+INFO 2025-07-16 18:14:04,610 basehttp 92226 6197964800 "OPTIONS /api/auth/me/ HTTP/1.1" 200 0
+INFO 2025-07-16 18:14:04,786 basehttp 92226 6214791168 "OPTIONS /api/auth/me/ HTTP/1.1" 200 0
+INFO 2025-07-16 18:14:04,800 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:14:04,809 basehttp 92226 6214791168 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:14:17,603 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:14:17,608 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:17:12,482 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:17:12,489 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:22:41,279 basehttp 92226 6197964800 "OPTIONS /api/trips/ HTTP/1.1" 200 0
+INFO 2025-07-16 18:22:41,297 basehttp 92226 6214791168 "OPTIONS /api/trips/ HTTP/1.1" 200 0
+INFO 2025-07-16 18:22:41,406 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 52
+INFO 2025-07-16 18:22:41,431 basehttp 92226 6214791168 "GET /api/trips/ HTTP/1.1" 200 52
+INFO 2025-07-16 18:24:57,444 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:24:57,450 basehttp 92226 6214791168 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:25:00,710 basehttp 92226 6214791168 "POST /api/auth/login/ HTTP/1.1" 200 858
+INFO 2025-07-16 18:25:00,783 basehttp 92226 6214791168 "GET /api/trips/ HTTP/1.1" 200 52
+INFO 2025-07-16 18:25:00,797 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 52
+INFO 2025-07-16 18:25:13,850 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 52
+INFO 2025-07-16 18:25:13,855 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 52
+INFO 2025-07-16 18:25:20,488 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 52
+INFO 2025-07-16 18:25:20,497 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 52
+INFO 2025-07-16 18:28:32,404 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 52
+INFO 2025-07-16 18:28:32,415 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 52
+INFO 2025-07-16 18:28:41,446 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:28:41,450 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:28:41,567 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 52
+INFO 2025-07-16 18:28:41,579 basehttp 92226 6214791168 "GET /api/trips/ HTTP/1.1" 200 52
+INFO 2025-07-16 18:34:33,369 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 52
+INFO 2025-07-16 18:35:29,634 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:35:29,640 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:35:29,775 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 52
+INFO 2025-07-16 18:35:29,792 basehttp 92226 6214791168 "GET /api/trips/ HTTP/1.1" 200 52
+INFO 2025-07-16 18:35:41,648 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:35:41,652 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:35:41,842 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 52
+INFO 2025-07-16 18:35:41,879 basehttp 92226 6214791168 "GET /api/trips/ HTTP/1.1" 200 52
+INFO 2025-07-16 18:35:59,263 basehttp 92226 6197964800 "POST /api/trips/ HTTP/1.1" 201 197
+INFO 2025-07-16 18:36:25,550 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:36:25,559 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:36:25,668 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 415
+INFO 2025-07-16 18:36:25,687 basehttp 92226 6214791168 "GET /api/trips/ HTTP/1.1" 200 415
+INFO 2025-07-16 18:36:27,292 basehttp 92226 6214791168 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:36:27,303 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:36:27,360 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 415
+INFO 2025-07-16 18:36:27,378 basehttp 92226 6214791168 "GET /api/trips/ HTTP/1.1" 200 415
+INFO 2025-07-16 18:36:28,105 basehttp 92226 6214791168 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:36:28,112 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:36:28,164 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 415
+INFO 2025-07-16 18:36:28,179 basehttp 92226 6214791168 "GET /api/trips/ HTTP/1.1" 200 415
+INFO 2025-07-16 18:36:28,856 basehttp 92226 6214791168 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:36:28,872 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:36:28,925 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 415
+INFO 2025-07-16 18:36:28,936 basehttp 92226 6214791168 "GET /api/trips/ HTTP/1.1" 200 415
+INFO 2025-07-16 18:36:29,561 basehttp 92226 6214791168 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:36:29,581 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:36:29,637 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 415
+INFO 2025-07-16 18:36:29,645 basehttp 92226 6214791168 "GET /api/trips/ HTTP/1.1" 200 415
+INFO 2025-07-16 18:38:01,488 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:38:01,524 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:38:08,030 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 415
+INFO 2025-07-16 18:38:08,048 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 415
+INFO 2025-07-16 18:41:31,241 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:41:31,283 basehttp 92226 6214791168 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:41:31,424 basehttp 92226 6214791168 "GET /api/trips/ HTTP/1.1" 200 415
+INFO 2025-07-16 18:41:31,462 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 415
+INFO 2025-07-16 18:41:39,135 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:41:39,152 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:41:39,336 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 415
+INFO 2025-07-16 18:41:39,361 basehttp 92226 6214791168 "GET /api/trips/ HTTP/1.1" 200 415
+INFO 2025-07-16 18:41:59,507 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:41:59,550 basehttp 92226 6214791168 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:41:59,679 basehttp 92226 6214791168 "GET /api/trips/ HTTP/1.1" 200 415
+INFO 2025-07-16 18:41:59,718 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 415
+INFO 2025-07-16 18:42:05,503 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:42:05,507 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:42:05,642 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 415
+INFO 2025-07-16 18:42:05,670 basehttp 92226 6214791168 "GET /api/trips/ HTTP/1.1" 200 415
+INFO 2025-07-16 18:42:30,191 basehttp 92226 6197964800 "POST /api/trips/ HTTP/1.1" 201 199
+INFO 2025-07-16 18:42:37,980 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 781
+INFO 2025-07-16 18:43:06,780 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:43:06,805 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:43:06,905 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 781
+INFO 2025-07-16 18:43:06,937 basehttp 92226 6214791168 "GET /api/trips/ HTTP/1.1" 200 781
+INFO 2025-07-16 18:43:52,771 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 781
+INFO 2025-07-16 18:43:59,207 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:43:59,226 basehttp 92226 6214791168 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:43:59,344 basehttp 92226 6214791168 "GET /api/trips/ HTTP/1.1" 200 781
+INFO 2025-07-16 18:43:59,359 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 781
+INFO 2025-07-16 18:44:10,145 basehttp 92226 6197964800 "POST /api/trips/ HTTP/1.1" 201 179
+INFO 2025-07-16 18:46:05,938 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:46:05,948 basehttp 92226 6197964800 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-16 18:46:06,082 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 1127
+INFO 2025-07-16 18:46:06,229 basehttp 92226 6197964800 "GET /api/trips/ HTTP/1.1" 200 1127

@@ -19,13 +19,14 @@ export const useSearch = () => {
     try {
       const response = await apiService.searchPlaces(query);
       
+      // Handle both backend API format and fallback mock format
       const searchResults: SearchResult[] = response.results.map(place => ({
         id: place.place_id,
         name: place.name,
-        address: place.formatted_address,
-        lat: place.geometry.location.lat,
-        lng: place.geometry.location.lng,
-        type: place.types[0] || "establishment",
+        address: place.address || place.formatted_address,
+        lat: place.latitude || place.geometry?.location?.lat,
+        lng: place.longitude || place.geometry?.location?.lng,
+        type: place.types?.[0] || "establishment",
         rating: place.rating,
       }));
 

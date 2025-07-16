@@ -7,25 +7,53 @@ import RecommendationsPanel from "./TripPlanner/RecommendationsPanel";
 import TripDetailsDashboard from "./TripPlanner/TripDetailsDashboard";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Search, Menu, Bell, User, MapPin, Settings, Zap } from "lucide-react";
+import {
+  Search,
+  Menu,
+  Bell,
+  User,
+  MapPin,
+  Settings,
+  Zap,
+  LogOut,
+} from "lucide-react";
 import { useTripStore } from "../hooks/useTripStore";
 import { useSearch } from "../hooks/useSearch";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Home() {
   const tripStore = useTripStore();
   const search = useSearch();
+  const { user, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
 
+  const handleLogout = async () => {
+    await logout();
+  };
+
   // Load initial data
   useEffect(() => {
-    tripStore.loadWeatherForecasts();
-    if (tripStore.currentTrip?.stops.length) {
-      const lastStop =
-        tripStore.currentTrip.stops[tripStore.currentTrip.stops.length - 1];
-      tripStore.loadRecommendations(lastStop.lat, lastStop.lng);
-    }
+    // Load trips from backend when component mounts
+    tripStore.loadTrips();
   }, []);
+
+  // Load weather and recommendations when current trip changes
+  useEffect(() => {
+    if (tripStore.currentTrip) {
+      tripStore.loadWeatherForecasts();
+      if (
+        tripStore.currentTrip.stops &&
+        tripStore.currentTrip.stops.length > 0
+      ) {
+        const lastStop =
+          tripStore.currentTrip.stops[tripStore.currentTrip.stops.length - 1];
+        if (lastStop.lat && lastStop.lng) {
+          tripStore.loadRecommendations(lastStop.lat, lastStop.lng);
+        }
+      }
+    }
+  }, [tripStore.currentTrip]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,13 +101,36 @@ export default function Home() {
           <Button variant="ghost" size="icon">
             <Bell className="h-5 w-5" />
           </Button>
-          <Avatar className="h-8 w-8">
-            <AvatarImage
-              src="https://api.dicebear.com/7.x/avataaars/svg?seed=roadtripper"
-              alt="User"
-            />
-            <AvatarFallback>U</AvatarFallback>
-          </Avatar>
+
+          {/* User Info and Logout */}
+          <div className="flex items-center space-x-3">
+            <div className="hidden md:block text-right">
+              <p className="text-sm font-medium">
+                {user?.full_name || `${user?.first_name} ${user?.last_name}`}
+              </p>
+              <p className="text-xs text-muted-foreground">{user?.email}</p>
+            </div>
+            <Avatar className="h-8 w-8">
+              <AvatarImage
+                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${
+                  user?.email || "user"
+                }`}
+                alt={user?.full_name || "User"}
+              />
+              <AvatarFallback>
+                {user?.first_name?.[0]}
+                {user?.last_name?.[0]}
+              </AvatarFallback>
+            </Avatar>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogout}
+              title="Logout"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -102,6 +153,15 @@ export default function Home() {
             searchResults={search.results}
             isSearching={search.isLoading}
             onSearch={search.searchPlaces}
+            onCreateTrip={async (tripData) => {
+              try {
+                await tripStore.createTrip(tripData);
+              } catch (error) {
+                console.error("Failed to create trip:", error);
+              }
+            }}
+            hasCurrentTrip={!!tripStore.currentTrip}
+            isLoading={tripStore.isLoading}
           />
         </motion.div>
 
@@ -109,7 +169,7 @@ export default function Home() {
         <div className="flex-1 relative overflow-hidden">
           <InteractiveMap
             waypoints={
-              tripStore.currentTrip?.stops.map((stop) => ({
+              tripStore.currentTrip?.stops?.map((stop) => ({
                 id: stop.id,
                 name: stop.name,
                 lat: stop.lat || 0,
@@ -127,12 +187,12 @@ export default function Home() {
               size="icon"
               className="rounded-full shadow-md"
               onClick={() => {
-                const lastStop =
-                  tripStore.currentTrip?.stops[
-                    tripStore.currentTrip.stops.length - 1
-                  ];
-                if (lastStop) {
-                  tripStore.loadRecommendations(lastStop.lat, lastStop.lng);
+                const stops = tripStore.currentTrip?.stops;
+                if (stops && stops.length > 0) {
+                  const lastStop = stops[stops.length - 1];
+                  if (lastStop?.lat && lastStop?.lng) {
+                    tripStore.loadRecommendations(lastStop.lat, lastStop.lng);
+                  }
                 }
               }}
             >
@@ -158,7 +218,7 @@ export default function Home() {
           <RecommendationsPanel
             selectedStop={
               selectedStopId
-                ? tripStore.currentTrip?.stops.find(
+                ? tripStore.currentTrip?.stops?.find(
                     (s) => s.id === selectedStopId
                   )?.name || "Current Location"
                 : "Current Location"

@@ -1,17 +1,40 @@
-// API service for external data fetching
-// In a real app, these would connect to actual APIs
+// API service for backend integration
+const API_BASE_URL = 'http://localhost:8000/api';
+
+// Helper function to get auth token
+const getAuthToken = () => {
+  return localStorage.getItem('access_token');
+};
+
+// Helper function to make authenticated requests
+const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) => {
+  const token = getAuthToken();
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` }),
+    ...options.headers,
+  };
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || errorData.detail || `HTTP error! status: ${response.status}`);
+  }
+
+  return response.json();
+};
 
 export interface PlacesSearchResponse {
   results: Array<{
     place_id: string;
     name: string;
-    formatted_address: string;
-    geometry: {
-      location: {
-        lat: number;
-        lng: number;
-      };
-    };
+    address: string;
+    latitude: number;
+    longitude: number;
     rating?: number;
     types: string[];
   }>;
@@ -37,79 +60,287 @@ export interface RecommendationsResponse {
     rating: number;
     price_level?: number;
     types: string[];
-    geometry: {
-      location: {
-        lat: number;
-        lng: number;
-      };
-    };
-    photos?: Array<{
-      photo_reference: string;
-    }>;
-    opening_hours?: {
-      open_now: boolean;
-    };
+    latitude: number;
+    longitude: number;
+    business_status: string;
   }>;
 }
 
-class ApiService {
-  private baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+interface RegisterData {
+  email: string;
+  username: string;
+  first_name: string;
+  last_name: string;
+  password: string;
+  password_confirm: string;
+}
 
-  // Search for places using Google Places API (mock implementation)
-  async searchPlaces(query: string): Promise<PlacesSearchResponse> {
-    // Mock implementation - replace with actual API call
-    await new Promise(resolve => setTimeout(resolve, 500));
+class ApiService {
+  private baseUrl = API_BASE_URL;
+
+  // Authentication methods
+  async register(userData: RegisterData) {
+    const response = await fetch(`${this.baseUrl}/auth/register/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.detail || `Registration failed: ${response.status}`);
+    }
+
+    const data = await response.json();
     
+    // Store tokens in localStorage
+    if (data.tokens) {
+      localStorage.setItem('access_token', data.tokens.access);
+      localStorage.setItem('refresh_token', data.tokens.refresh);
+    }
+
+    return data;
+  }
+
+  async login(email: string, password: string) {
+    const response = await fetch(`${this.baseUrl}/auth/login/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.detail || `Login failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    // Store tokens in localStorage
+    if (data.tokens) {
+      localStorage.setItem('access_token', data.tokens.access);
+      localStorage.setItem('refresh_token', data.tokens.refresh);
+    }
+
+    return data;
+  }
+
+  async logout() {
+    const refreshToken = localStorage.getItem('refresh_token');
+    
+    if (refreshToken) {
+      try {
+        await makeAuthenticatedRequest(`${this.baseUrl}/auth/logout/`, {
+          method: 'POST',
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    }
+
+    // Clear tokens from localStorage
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+  }
+
+  async getCurrentUser() {
+    try {
+      return await makeAuthenticatedRequest(`${this.baseUrl}/auth/me/`);
+    } catch (error) {
+      console.error('Get current user error:', error);
+      throw error;
+    }
+  }
+
+  // Search for places using backend API
+  async searchPlaces(query: string): Promise<PlacesSearchResponse> {
+    try {
+      const response = await makeAuthenticatedRequest(
+        `${this.baseUrl}/places/search/?q=${encodeURIComponent(query)}`
+      );
+      return response;
+    } catch (error) {
+      console.error('Places search error:', error);
+      // Fallback to mock data if API fails
+      return this._getMockPlacesData(query);
+    }
+  }
+
+  // Trip Management APIs
+  async getTrips() {
+    try {
+      return await makeAuthenticatedRequest(`${this.baseUrl}/trips/`);
+    } catch (error) {
+      console.error('Get trips error:', error);
+      return { results: [] };
+    }
+  }
+
+  async createTrip(tripData: {
+    name: string;
+    description?: string;
+    route_type?: string;
+    start_date?: string;
+    end_date?: string;
+  }) {
+    try {
+      return await makeAuthenticatedRequest(`${this.baseUrl}/trips/`, {
+        method: 'POST',
+        body: JSON.stringify(tripData),
+      });
+    } catch (error) {
+      console.error('Create trip error:', error);
+      throw error;
+    }
+  }
+
+  async getTripDetails(tripId: number) {
+    try {
+      return await makeAuthenticatedRequest(`${this.baseUrl}/trips/${tripId}/`);
+    } catch (error) {
+      console.error('Get trip details error:', error);
+      throw error;
+    }
+  }
+
+  async updateTrip(tripId: number, tripData: any) {
+    try {
+      return await makeAuthenticatedRequest(`${this.baseUrl}/trips/${tripId}/`, {
+        method: 'PUT',
+        body: JSON.stringify(tripData),
+      });
+    } catch (error) {
+      console.error('Update trip error:', error);
+      throw error;
+    }
+  }
+
+  async deleteTrip(tripId: number) {
+    try {
+      return await makeAuthenticatedRequest(`${this.baseUrl}/trips/${tripId}/`, {
+        method: 'DELETE',
+      });
+    } catch (error) {
+      console.error('Delete trip error:', error);
+      throw error;
+    }
+  }
+
+  // Stop Management APIs
+  async addStopToTrip(tripId: number, stopData: {
+    name: string;
+    address: string;
+    latitude: number;
+    longitude: number;
+    order?: number;
+    stop_type?: string;
+  }) {
+    try {
+      return await makeAuthenticatedRequest(`${this.baseUrl}/trips/${tripId}/stops/`, {
+        method: 'POST',
+        body: JSON.stringify(stopData),
+      });
+    } catch (error) {
+      console.error('Add stop error:', error);
+      throw error;
+    }
+  }
+
+  async removeStopFromTrip(tripId: number, stopId: number) {
+    try {
+      return await makeAuthenticatedRequest(`${this.baseUrl}/trips/${tripId}/stops/${stopId}/`, {
+        method: 'DELETE',
+      });
+    } catch (error) {
+      console.error('Remove stop error:', error);
+      throw error;
+    }
+  }
+
+  async reorderStops(tripId: number, stopOrders: Array<{ id: number; order: number }>) {
+    try {
+      return await makeAuthenticatedRequest(`${this.baseUrl}/trips/${tripId}/stops/reorder/`, {
+        method: 'POST',
+        body: JSON.stringify({ stop_orders: stopOrders }),
+      });
+    } catch (error) {
+      console.error('Reorder stops error:', error);
+      throw error;
+    }
+  }
+
+  // Get weather forecast for a location
+  async getWeatherForecast(lat: number, lng: number): Promise<WeatherResponse> {
+    try {
+      const response = await makeAuthenticatedRequest(
+        `${this.baseUrl}/weather/current/?lat=${lat}&lng=${lng}`
+      );
+      return response;
+    } catch (error) {
+      console.error('Weather forecast error:', error);
+      // Fallback to mock data if API fails
+      return this._getMockWeatherData(lat, lng);
+    }
+  }
+
+  // Get recommendations near a location
+  async getNearbyRecommendations(lat: number, lng: number, type?: string): Promise<RecommendationsResponse> {
+    try {
+      const url = type 
+        ? `${this.baseUrl}/recommendations/nearby/?lat=${lat}&lng=${lng}&type=${type}`
+        : `${this.baseUrl}/recommendations/?lat=${lat}&lng=${lng}`;
+      
+      const response = await makeAuthenticatedRequest(url);
+      return response;
+    } catch (error) {
+      console.error('Recommendations error:', error);
+      // Fallback to mock data if API fails
+      return this._getMockRecommendationsData(lat, lng, type);
+    }
+  }
+
+  // Calculate route between points
+  async calculateRoute(waypoints: Array<{ lat: number; lng: number }>) {
+    try {
+      return await makeAuthenticatedRequest(`${this.baseUrl}/routes/calculate/`, {
+        method: 'POST',
+        body: JSON.stringify({ waypoints }),
+      });
+    } catch (error) {
+      console.error('Route calculation error:', error);
+      // Fallback to mock calculation
+      return this._getMockRouteData(waypoints);
+    }
+  }
+
+  // Fallback mock data methods
+  private _getMockPlacesData(query: string): PlacesSearchResponse {
     return {
       results: [
         {
           place_id: `place_${Date.now()}_1`,
           name: `${query} National Park`,
-          formatted_address: `${query}, State, USA`,
-          geometry: {
-            location: {
-              lat: 40.7128 + Math.random() * 10,
-              lng: -74.006 + Math.random() * 10,
-            },
-          },
+          address: `${query}, State, USA`,
+          latitude: 40.7128 + Math.random() * 10,
+          longitude: -74.006 + Math.random() * 10,
           rating: 4.5,
           types: ['park', 'tourist_attraction'],
         },
         {
           place_id: `place_${Date.now()}_2`,
           name: `${query} Downtown`,
-          formatted_address: `Downtown ${query}, State, USA`,
-          geometry: {
-            location: {
-              lat: 40.7128 + Math.random() * 10,
-              lng: -74.006 + Math.random() * 10,
-            },
-          },
+          address: `Downtown ${query}, State, USA`,
+          latitude: 40.7128 + Math.random() * 10,
+          longitude: -74.006 + Math.random() * 10,
           rating: 4.2,
           types: ['locality', 'political'],
-        },
-        {
-          place_id: `place_${Date.now()}_3`,
-          name: `${query} Museum`,
-          formatted_address: `${query} Museum, State, USA`,
-          geometry: {
-            location: {
-              lat: 40.7128 + Math.random() * 10,
-              lng: -74.006 + Math.random() * 10,
-            },
-          },
-          rating: 4.7,
-          types: ['museum', 'tourist_attraction'],
         },
       ],
     };
   }
 
-  // Get weather forecast for a location
-  async getWeatherForecast(lat: number, lng: number): Promise<WeatherResponse> {
-    // Mock implementation - replace with actual weather API
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
+  private _getMockWeatherData(lat: number, lng: number): WeatherResponse {
     const conditions = ['Sunny', 'Partly Cloudy', 'Light Rain', 'Clear', 'Overcast'];
     const condition = conditions[Math.floor(Math.random() * conditions.length)];
     
@@ -127,114 +358,38 @@ class ApiService {
     };
   }
 
-  // Get recommendations near a location
-  async getNearbyRecommendations(lat: number, lng: number, type?: string): Promise<RecommendationsResponse> {
-    // Mock implementation - replace with actual places API
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    const attractions = [
-      'Scenic Overlook', 'Historic Site', 'Nature Trail', 'Visitor Center', 'Art Gallery'
-    ];
-    const restaurants = [
-      'Local Bistro', 'Farm-to-Table Restaurant', 'Craft Brewery', 'Coffee House', 'Diner'
-    ];
-    const accommodations = [
-      'Mountain Lodge', 'Historic Inn', 'Boutique Hotel', 'Camping Resort', 'B&B'
-    ];
-    
-    const getRandomName = (category: string[]) => 
-      category[Math.floor(Math.random() * category.length)];
-    
+  private _getMockRecommendationsData(lat: number, lng: number, type?: string): RecommendationsResponse {
     const results = [];
-    const types = type ? [type] : ['attraction', 'restaurant', 'accommodation'];
-    
-    for (const placeType of types) {
-      for (let i = 0; i < 2; i++) {
-        let name, placeTypes;
-        
-        switch (placeType) {
-          case 'attraction':
-            name = getRandomName(attractions);
-            placeTypes = ['tourist_attraction', 'point_of_interest'];
-            break;
-          case 'restaurant':
-            name = getRandomName(restaurants);
-            placeTypes = ['restaurant', 'food', 'establishment'];
-            break;
-          case 'accommodation':
-            name = getRandomName(accommodations);
-            placeTypes = ['lodging', 'establishment'];
-            break;
-          default:
-            name = getRandomName(attractions);
-            placeTypes = ['establishment'];
-        }
-        
-        results.push({
-          place_id: `${placeType}_${Date.now()}_${i}`,
-          name,
-          rating: 3.5 + Math.random() * 1.5,
-          price_level: Math.floor(Math.random() * 4) + 1,
-          types: placeTypes,
-          geometry: {
-            location: {
-              lat: lat + (Math.random() - 0.5) * 0.1,
-              lng: lng + (Math.random() - 0.5) * 0.1,
-            },
-          },
-          photos: [{
-            photo_reference: `photo_${Date.now()}_${i}`,
-          }],
-          opening_hours: {
-            open_now: Math.random() > 0.3,
-          },
-        });
-      }
+    for (let i = 0; i < 3; i++) {
+      results.push({
+        place_id: `${type || 'general'}_${Date.now()}_${i}`,
+        name: `Mock ${type || 'Place'} ${i + 1}`,
+        rating: 3.5 + Math.random() * 1.5,
+        price_level: Math.floor(Math.random() * 4) + 1,
+        types: [type || 'establishment'],
+        latitude: lat + (Math.random() - 0.5) * 0.1,
+        longitude: lng + (Math.random() - 0.5) * 0.1,
+        business_status: 'OPERATIONAL',
+      });
     }
-    
     return { results };
   }
 
-  // Calculate route between points
-  async calculateRoute(waypoints: Array<{ lat: number; lng: number }>) {
-    // Mock implementation - replace with actual routing API
-    await new Promise(resolve => setTimeout(resolve, 600));
-    
+  private _getMockRouteData(waypoints: Array<{ lat: number; lng: number }>) {
     if (waypoints.length < 2) {
-      return {
-        totalDistance: 0,
-        totalTime: 0,
-        legs: [],
-      };
+      return { totalDistance: 0, totalTime: 0, legs: [] };
     }
     
-    const legs = [];
-    let totalDistance = 0;
-    let totalTime = 0;
-    
-    for (let i = 0; i < waypoints.length - 1; i++) {
-      const distance = Math.random() * 200 + 50; // 50-250 miles
-      const time = distance / (45 + Math.random() * 30); // 45-75 mph average
-      
-      legs.push({
-        distance: {
-          text: `${Math.round(distance)} miles`,
-          value: distance,
-        },
-        duration: {
-          text: `${Math.round(time * 60)} min`,
-          value: time,
-        },
-      });
-      
-      totalDistance += distance;
-      totalTime += time;
-    }
+    const totalDistance = waypoints.length * 150; // Mock: 150 miles per segment
+    const totalTime = totalDistance / 60; // Mock: 60 mph average
     
     return {
       totalDistance: Math.round(totalDistance),
       totalTime: Math.round(totalTime * 10) / 10,
-      legs,
+      legs: waypoints.slice(0, -1).map(() => ({
+        distance: { text: '150 miles', value: 150 },
+        duration: { text: '2.5 hours', value: 2.5 }
+      }))
     };
   }
 }

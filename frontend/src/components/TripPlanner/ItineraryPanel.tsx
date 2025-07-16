@@ -30,6 +30,9 @@ interface ItineraryPanelProps {
   searchResults?: SearchResult[];
   isSearching?: boolean;
   onSearch?: (query: string) => void;
+  onCreateTrip?: (tripData: { name: string; description?: string }) => void;
+  hasCurrentTrip?: boolean;
+  isLoading?: boolean;
 }
 
 const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
@@ -42,8 +45,14 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
   searchResults = [],
   isSearching = false,
   onSearch,
+  onCreateTrip,
+  hasCurrentTrip = true,
+  isLoading = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [showCreateTrip, setShowCreateTrip] = useState(!hasCurrentTrip);
+  const [tripName, setTripName] = useState("");
+  const [tripDescription, setTripDescription] = useState("");
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,10 +84,99 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
     onReorderStops(items);
   };
 
+  const handleCreateTrip = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (onCreateTrip && tripName.trim()) {
+      onCreateTrip({
+        name: tripName,
+        description: tripDescription || undefined,
+      });
+      setTripName("");
+      setTripDescription("");
+      setShowCreateTrip(false);
+    }
+  };
+
+  // Show create trip interface if no current trip
+  if (!hasCurrentTrip || showCreateTrip) {
+    return (
+      <div className="h-full w-[350px] bg-background border-r flex flex-col">
+        <div className="p-4 border-b">
+          <h2 className="text-xl font-bold mb-4">Create New Trip</h2>
+          
+          <form onSubmit={handleCreateTrip} className="space-y-4">
+            <div>
+              <Label htmlFor="trip-name">Trip Name</Label>
+              <Input
+                id="trip-name"
+                type="text"
+                placeholder="e.g., California Coast Road Trip"
+                value={tripName}
+                onChange={(e) => setTripName(e.target.value)}
+                required
+                disabled={isLoading}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="trip-description">Description (Optional)</Label>
+              <Input
+                id="trip-description"
+                type="text"
+                placeholder="Brief description of your trip"
+                value={tripDescription}
+                onChange={(e) => setTripDescription(e.target.value)}
+                disabled={isLoading}
+              />
+            </div>
+            
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoading || !tripName.trim()}
+            >
+              {isLoading ? "Creating..." : "Create Trip"}
+            </Button>
+            
+            {hasCurrentTrip && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => setShowCreateTrip(false)}
+                disabled={isLoading}
+              >
+                Cancel
+              </Button>
+            )}
+          </form>
+        </div>
+        
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="text-center text-muted-foreground">
+            <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p className="text-sm">Create your first trip to start planning your adventure!</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full w-[350px] bg-background border-r flex flex-col">
       <div className="p-4 border-b">
-        <h2 className="text-xl font-bold mb-4">Trip Itinerary</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold">Trip Itinerary</h2>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCreateTrip(true)}
+            disabled={isLoading}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            New Trip
+          </Button>
+        </div>
 
         <form onSubmit={handleSearch} className="relative">
           <div className="relative">
