@@ -72,7 +72,7 @@ export const DynamicFeatureDemo: React.FC = () => {
               </Button>
             </Link>
             <div className="h-6 w-px bg-border" />
-            <h1 className="text-xl font-semibold">Dynamic Features Demo</h1>
+            <h1 className="text-xl font-semibold">Features Demo</h1>
           </div>
           <Link to="/">
             <Button 
@@ -89,13 +89,13 @@ export const DynamicFeatureDemo: React.FC = () => {
 
       <div className="p-6 space-y-6 max-w-6xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">🚗 Dynamic Road Trip Planner</h1>
+          <h1 className="text-3xl font-bold mb-2">🚗 Road Trip Planner</h1>
           <p className="text-muted-foreground">
-            All features are now dynamic! Search places, get recommendations, view weather, and calculate routes in real-time.
+            Search places, get recommendations, view weather, and calculate routes in real-time.
           </p>
           <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-800">
-              <strong>💡 Tip:</strong> This demo showcases all the dynamic features. Use the "Back to Main App" button above to return to the full trip planning interface.
+              <strong>💡 Tip:</strong> This demo showcases all the primary features of this app. Use the "Back to Main App" button above to return to the full trip planning interface.
             </p>
           </div>
         </div>
