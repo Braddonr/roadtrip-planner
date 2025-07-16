@@ -4,7 +4,7 @@ An interactive road trip planning application with route optimization, points of
 
 ## Tech Stack
 - **Frontend:** React, TypeScript, Vite, Google Maps API
-- **Backend:** Python, Django, Django REST Framework, PostgreSQL
+- **Backend:** Python, Django, Django REST Framework, SQLite
 
 ## Features
 - Route optimization
