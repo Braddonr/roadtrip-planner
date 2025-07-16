@@ -1,0 +1,830 @@
+{
+    "info": {
+      "name": "Road Trip Planner API",
+      "description": "Postman collection for the Road Trip Planner Django REST API, including authentication, trip management, places, routes, weather, and recommendations endpoints. Updated to dynamically set the access token from the login response's tokens.access field.",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+      {
+        "name": "Authentication",
+        "item": [
+          {
+            "name": "Register User",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"username\": \"newuser\", \"email\": \"newuser@example.com\", \"password\": \"securepassword123\"}"
+              },
+              "url": {
+                "raw": "http://localhost:8000/api/auth/register/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "auth", "register", ""]
+              }
+            }
+          },
+          {
+            "name": "Login User",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"username\": \"test\", \"password\": \"securepassword123\"}"
+              },
+              "url": {
+                "raw": "http://localhost:8000/api/auth/login/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "auth", "login", ""]
+              }
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "var response = pm.response.json();",
+                    "if (response.tokens.access) {",
+                    "    pm.environment.set('access_token', response.tokens.access);",
+                    "} else {",
+                    "    console.error('Access token not found in response');",
+                    "}"
+                  ],
+                  "type": "text/javascript"
+                }
+              }
+            ]
+          },
+          {
+            "name": "Logout User",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "http://localhost:8000/api/auth/logout/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "auth", "logout", ""]
+              }
+            }
+          },
+          {
+            "name": "Get Current User",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "http://localhost:8000/api/auth/me/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "auth", "me", ""]
+              }
+            }
+          },
+          {
+            "name": "Update User Profile",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"first_name\": \"John\", \"last_name\": \"Doe\", \"email\": \"john.doe@example.com\"}"
+              },
+              "url": {
+                "raw": "http://localhost:8000/api/auth/profile/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "auth", "profile", ""]
+              }
+            }
+          },
+          {
+            "name": "Update User Preferences",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"preferred_route_type\": \"scenic\", \"default_units\": \"metric\"}"
+              },
+              "url": {
+                "raw": "http://localhost:8000/api/auth/preferences/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "auth", "preferences", ""]
+              }
+            }
+          },
+          {
+            "name": "Refresh JWT Token",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"refresh\": \"YOUR_REFRESH_TOKEN\"}"
+              },
+              "url": {
+                "raw": "http://localhost:8000/api/auth/token/refresh/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "auth", "token", "refresh", ""]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "Trip Management",
+        "item": [
+          {
+            "name": "List User's Trips",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "http://localhost:8000/api/trips/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "trips", ""]
+              }
+            }
+          },
+          {
+            "name": "Create New Trip",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"name\": \"California Coast Road Trip\", \"description\": \"Epic coastal drive\", \"route_type\": \"scenic\", \"start_date\": \"2024-08-01\", \"end_date\": \"2024-08-07\"}"
+              },
+              "url": {
+                "raw": "http://localhost:8000/api/trips/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "trips", ""]
+              }
+            }
+          },
+          {
+            "name": "Get Trip Details",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "http://localhost:8000/api/trips/1/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "trips", "1", ""]
+              }
+            }
+          },
+          {
+            "name": "Update Trip",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"name\": \"Updated California Coast Road Trip\", \"description\": \"Updated epic coastal drive\", \"route_type\": \"scenic\", \"start_date\": \"2024-08-01\", \"end_date\": \"2024-08-07\"}"
+              },
+              "url": {
+                "raw": "http://localhost:8000/api/trips/1/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "trips", "1", ""]
+              }
+            }
+          },
+          {
+            "name": "Delete Trip",
+            "request": {
+              "method": "DELETE",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "http://localhost:8000/api/trips/1/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "trips", "1", ""]
+              }
+            }
+          },
+          {
+            "name": "Recalculate Trip Stats",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "http://localhost:8000/api/trips/1/calculate/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "trips", "1", "calculate", ""]
+              }
+            }
+          },
+          {
+            "name": "List Trip Stops",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "http://localhost:8000/api/trips/1/stops/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "trips", "1", "stops", ""]
+              }
+            }
+          },
+          {
+            "name": "Add Stop to Trip",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"name\": \"Golden Gate Bridge\", \"address\": \"Golden Gate Bridge, San Francisco, CA\", \"latitude\": 37.8199, \"longitude\": -122.4783, \"stop_type\": \"waypoint\", \"order\": 1}"
+              },
+              "url": {
+                "raw": "http://localhost:8000/api/trips/1/stops/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "trips", "1", "stops", ""]
+              }
+            }
+          },
+          {
+            "name": "Update Stop",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"name\": \"Updated Golden Gate Bridge\", \"address\": \"Golden Gate Bridge, San Francisco, CA\", \"latitude\": 37.8199, \"longitude\": -122.4783, \"stop_type\": \"waypoint\", \"order\": 1}"
+              },
+              "url": {
+                "raw": "http://localhost:8000/api/trips/1/stops/1/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "trips", "1", "stops", "1", ""]
+              }
+            }
+          },
+          {
+            "name": "Delete Stop",
+            "request": {
+              "method": "DELETE",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "http://localhost:8000/api/trips/1/stops/1/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "trips", "1", "stops", "1", ""]
+              }
+            }
+          },
+          {
+            "name": "Reorder Stops",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"stops\": [{\"id\": 1, \"order\": 2}, {\"id\": 2, \"order\": 1}]}"
+              },
+              "url": {
+                "raw": "http://localhost:8000/api/trips/1/stops/reorder/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "trips", "1", "stops", "reorder", ""]
+              }
+            }
+          },
+          {
+            "name": "List Trip Shares",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "http://localhost:8000/api/trips/1/shares/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "trips", "1", "shares", ""]
+              }
+            }
+          },
+          {
+            "name": "Share Trip with User",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"user_id\": 2, \"permission_level\": \"editor\"}"
+              },
+              "url": {
+                "raw": "http://localhost:8000/api/trips/1/shares/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "trips", "1", "shares", ""]
+              }
+            }
+          },
+          {
+            "name": "Update Share Permissions",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"permission_level\": \"viewer\"}"
+              },
+              "url": {
+                "raw": "http://localhost:8000/api/trips/1/shares/1/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "trips", "1", "shares", "1", ""]
+              }
+            }
+          },
+          {
+            "name": "Remove Share",
+            "request": {
+              "method": "DELETE",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "http://localhost:8000/api/trips/1/shares/1/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "trips", "1", "shares", "1", ""]
+              }
+            }
+          },
+          {
+            "name": "Get Trips Shared with User",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "http://localhost:8000/api/trips/shared/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "trips", "shared", ""]
+              }
+            }
+          },
+          {
+            "name": "Get Public Trips",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "http://localhost:8000/api/trips/public/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "trips", "public", ""]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "Places & Search",
+        "item": [
+          {
+            "name": "Search Places",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "http://localhost:8000/api/places/search/?q=restaurants+in+san+francisco",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "places", "search", ""],
+                "query": [
+                  {
+                    "key": "q",
+                    "value": "restaurants in san francisco"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "Get Place Details",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "http://localhost:8000/api/places/PLACE_ID/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "places", "PLACE_ID", ""]
+              }
+            }
+          },
+          {
+            "name": "Get Nearby Places",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "http://localhost:8000/api/places/nearby/?lat=37.7749&lng=-122.4194",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "places", "nearby", ""],
+                "query": [
+                  {
+                    "key": "lat",
+                    "value": "37.7749"
+                  },
+                  {
+                    "key": "lng",
+                    "value": "-122.4194"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "Route Calculation",
+        "item": [
+          {
+            "name": "Calculate Route",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"waypoints\": [{\"latitude\": 37.7749, \"longitude\": -122.4194}, {\"latitude\": 37.8199, \"longitude\": -122.4783}]}"
+              },
+              "url": {
+                "raw": "http://localhost:8000/api/routes/calculate/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "routes", "calculate", ""]
+              }
+            }
+          },
+          {
+            "name": "Get Cached Route Details",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "http://localhost:8000/api/routes/1/",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "routes", "1", ""]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "Weather",
+        "item": [
+          {
+            "name": "Get Current Weather",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "http://localhost:8000/api/weather/current/?lat=37.7749&lng=-122.4194",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "weather", "current", ""],
+                "query": [
+                  {
+                    "key": "lat",
+                    "value": "37.7749"
+                  },
+                  {
+                    "key": "lng",
+                    "value": "-122.4194"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "Get Weather Forecast for Stops",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "http://localhost:8000/api/weather/forecast/?stops=[{\"latitude\": 37.7749, \"longitude\": -122.4194}, {\"latitude\": 37.8199, \"longitude\": -122.4783}]",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "weather", "forecast", ""],
+                "query": [
+                  {
+                    "key": "stops",
+                    "value": "[{\"latitude\": 37.7749, \"longitude\": -122.4194}, {\"latitude\": 37.8199, \"longitude\": -122.4783}]"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "Recommendations",
+        "item": [
+          {
+            "name": "Get Recommendations",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "http://localhost:8000/api/recommendations/?lat=37.7749&lng=-122.4194",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "recommendations", ""],
+                "query": [
+                  {
+                    "key": "lat",
+                    "value": "37.7749"
+                  },
+                  {
+                    "key": "lng",
+                    "value": "-122.4194"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "Get Nearby Recommendations by Type",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{access_token}}"
+                }
+              ],
+              "url": {
+                "raw": "http://localhost:8000/api/recommendations/nearby/?lat=37.7749&lng=-122.4194&type=restaurant",
+                "protocol": "http",
+                "host": ["localhost"],
+                "port": "8000",
+                "path": ["api", "recommendations", "nearby", ""],
+                "query": [
+                  {
+                    "key": "lat",
+                    "value": "37.7749"
+                  },
+                  {
+                    "key": "lng",
+                    "value": "-122.4194"
+                  },
+                  {
+                    "key": "type",
+                    "value": "restaurant"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
