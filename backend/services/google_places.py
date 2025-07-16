@@ -1,7 +1,7 @@
 """
 Google Places API service for place search and details.
 """
-import googlemaps
+import requests
 import logging
 from datetime import datetime, timedelta
 from django.conf import settings
@@ -17,11 +17,13 @@ class GooglePlacesService:
     
     def __init__(self):
         self.api_key = settings.GOOGLE_MAPS_API_KEY
+        self.base_url = "https://maps.googleapis.com/maps/api/place"
+        
         if not self.api_key:
             logger.warning("Google Maps API key not configured")
             self.client = None
         else:
-            self.client = googlemaps.Client(key=self.api_key)
+            self.client = True  # Simple flag to indicate API is available
     
     def search_places(self, query, location=None, radius=50000, place_type=None):
         """
@@ -37,7 +39,7 @@ class GooglePlacesService:
             list: List of place data
         """
         if not self.client:
-            logger.error("Google Places client not initialized")
+            logger.error("Google Places API key not configured")
             return []
         
         # Check cache first
@@ -48,29 +50,33 @@ class GooglePlacesService:
             return cached_results
         
         try:
-            # Perform text search
-            search_params = {
+            # Build API request URL
+            url = f"{self.base_url}/textsearch/json"
+            params = {
                 'query': query,
+                'key': self.api_key,
                 'language': 'en',
             }
             
             if location:
-                search_params['location'] = location
-                search_params['radius'] = radius
+                params['location'] = f"{location[0]},{location[1]}"
+                params['radius'] = radius
             
             if place_type:
-                search_params['type'] = place_type
+                params['type'] = place_type
             
-            results = self.client.places(
-                query=query,
-                location=location,
-                radius=radius,
-                type=place_type,
-                language='en'
-            )
+            # Make API request
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            if data.get('status') != 'OK':
+                logger.error(f"Google Places API error: {data.get('status')} - {data.get('error_message', '')}")
+                return []
             
             places_data = []
-            for result in results.get('results', []):
+            for result in data.get('results', []):
                 place_data = self._process_place_result(result)
                 places_data.append(place_data)
                 
@@ -101,7 +107,7 @@ class GooglePlacesService:
             dict: Detailed place information
         """
         if not self.client:
-            logger.error("Google Places client not initialized")
+            logger.error("Google Places API key not configured")
             return None
         
         # Check if we have cached data
@@ -114,20 +120,32 @@ class GooglePlacesService:
             pass
         
         try:
-            # Get place details from API
-            result = self.client.place(
-                place_id=place_id,
-                fields=[
+            # Build API request URL
+            url = f"{self.base_url}/details/json"
+            params = {
+                'place_id': place_id,
+                'key': self.api_key,
+                'fields': ','.join([
                     'place_id', 'name', 'formatted_address', 'geometry',
                     'rating', 'user_ratings_total', 'price_level',
                     'formatted_phone_number', 'international_phone_number',
                     'website', 'opening_hours', 'photos', 'reviews',
                     'types', 'business_status'
-                ],
-                language='en'
-            )
+                ]),
+                'language': 'en'
+            }
             
-            place_data = result.get('result', {})
+            # Make API request
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            if data.get('status') != 'OK':
+                logger.error(f"Google Places API error: {data.get('status')} - {data.get('error_message', '')}")
+                return None
+            
+            place_data = data.get('result', {})
             if place_data:
                 # Cache the detailed data
                 self._cache_place_data(place_data, detailed=True)
@@ -152,7 +170,7 @@ class GooglePlacesService:
             list: List of nearby places
         """
         if not self.client:
-            logger.error("Google Places client not initialized")
+            logger.error("Google Places API key not configured")
             return []
         
         # Check cache first
@@ -163,19 +181,30 @@ class GooglePlacesService:
             return cached_results
         
         try:
-            search_params = {
-                'location': (latitude, longitude),
+            # Build API request URL
+            url = f"{self.base_url}/nearbysearch/json"
+            params = {
+                'location': f"{latitude},{longitude}",
                 'radius': radius,
+                'key': self.api_key,
                 'language': 'en'
             }
             
             if place_type:
-                search_params['type'] = place_type
+                params['type'] = place_type
             
-            results = self.client.places_nearby(**search_params)
+            # Make API request
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            if data.get('status') != 'OK':
+                logger.error(f"Google Places API error: {data.get('status')} - {data.get('error_message', '')}")
+                return []
             
             places_data = []
-            for result in results.get('results', []):
+            for result in data.get('results', []):
                 place_data = self._process_place_result(result)
                 places_data.append(place_data)
                 
