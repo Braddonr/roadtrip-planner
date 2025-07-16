@@ -14,14 +14,10 @@ import {
   Save,
   Share2,
   MapPin,
+  Sun,
+  Cloud,
 } from "lucide-react";
-
-interface WeatherForecast {
-  location: string;
-  temperature: number;
-  condition: string;
-  icon: React.ReactNode;
-}
+import { WeatherForecast } from "@/types/trip";
 
 interface TripDetailsProps {
   totalDistance: number;
@@ -42,20 +38,7 @@ const TripDetailsDashboard = ({
   completionPercentage = 75,
   startDate = new Date(),
   endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-  weatherForecasts = [
-    {
-      location: "Starting Point",
-      temperature: 72,
-      condition: "Sunny",
-      icon: <CloudSun className="h-5 w-5 text-yellow-500" />,
-    },
-    {
-      location: "Destination",
-      temperature: 68,
-      condition: "Light Rain",
-      icon: <Droplets className="h-5 w-5 text-blue-500" />,
-    },
-  ],
+  weatherForecasts = [],
   onSave = () => console.log("Saving trip..."),
   onShare = () => console.log("Sharing trip..."),
 }: TripDetailsProps) => {
@@ -66,6 +49,20 @@ const TripDetailsDashboard = ({
       day: "numeric",
       year: "numeric",
     });
+  };
+
+  // Render weather icon based on condition
+  const renderWeatherIcon = (condition: string) => {
+    const lowerCondition = condition.toLowerCase();
+    if (lowerCondition.includes('sunny') || lowerCondition.includes('clear')) {
+      return <Sun className="h-5 w-5 text-yellow-500" />;
+    } else if (lowerCondition.includes('rain') || lowerCondition.includes('drizzle')) {
+      return <Droplets className="h-5 w-5 text-blue-500" />;
+    } else if (lowerCondition.includes('cloud')) {
+      return <Cloud className="h-5 w-5 text-gray-500" />;
+    } else {
+      return <CloudSun className="h-5 w-5 text-yellow-500" />;
+    }
   };
 
   return (
@@ -176,9 +173,9 @@ const TripDetailsDashboard = ({
                       </p>
                     </div>
                     <div className="flex items-center">
-                      {forecast.icon}
+                      {renderWeatherIcon(forecast.condition)}
                       <span className="ml-1 font-medium">
-                        {forecast.temperature}°F
+                        {Math.round(forecast.temperature)}°F
                       </span>
                     </div>
                   </div>

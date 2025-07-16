@@ -17,86 +17,51 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-
-interface Stop {
-  id: string;
-  name: string;
-  address: string;
-  arrivalTime?: string;
-  departureTime?: string;
-  travelTime?: string;
-  travelDistance?: string;
-}
+import { Stop } from "@/types/trip";
+import { SearchResult } from "@/types/trip";
 
 interface ItineraryPanelProps {
-  stops?: Stop[];
-  onAddStop?: (stop: Stop) => void;
-  onRemoveStop?: (stopId: string) => void;
-  onReorderStops?: (stops: Stop[]) => void;
-  onRouteTypeChange?: (routeType: string) => void;
-  selectedRouteType?: string;
+  stops: Stop[];
+  onAddStop: (stop: Omit<Stop, "id">) => void;
+  onRemoveStop: (stopId: string) => void;
+  onReorderStops: (stops: Stop[]) => void;
+  onRouteTypeChange: (routeType: string) => void;
+  selectedRouteType: string;
+  searchResults?: SearchResult[];
+  isSearching?: boolean;
+  onSearch?: (query: string) => void;
 }
 
 const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
-  stops = [
-    {
-      id: "1",
-      name: "Starting Point",
-      address: "123 Main St, Anytown, USA",
-      departureTime: "9:00 AM",
-    },
-    {
-      id: "2",
-      name: "Grand Canyon National Park",
-      address: "Grand Canyon, AZ",
-      arrivalTime: "2:00 PM",
-      departureTime: "5:00 PM",
-      travelTime: "5h",
-      travelDistance: "278 miles",
-    },
-    {
-      id: "3",
-      name: "Las Vegas",
-      address: "Las Vegas, NV",
-      arrivalTime: "8:00 PM",
-      travelTime: "3h",
-      travelDistance: "130 miles",
-    },
-  ],
-  onAddStop = () => {},
-  onRemoveStop = () => {},
-  onReorderStops = () => {},
-  onRouteTypeChange = () => {},
-  selectedRouteType = "fastest",
+  stops,
+  onAddStop,
+  onRemoveStop,
+  onReorderStops,
+  onRouteTypeChange,
+  selectedRouteType,
+  searchResults = [],
+  isSearching = false,
+  onSearch,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSearching(true);
-    // Mock search results
-    setTimeout(() => {
-      setSearchResults([
-        { id: "r1", name: "Zion National Park", address: "Springdale, UT" },
-        { id: "r2", name: "Bryce Canyon", address: "Bryce, UT" },
-        { id: "r3", name: "Antelope Canyon", address: "Page, AZ" },
-      ]);
-      setIsSearching(false);
-    }, 500);
+    if (onSearch && searchQuery.trim()) {
+      onSearch(searchQuery);
+    }
   };
 
-  const handleAddStop = (result: any) => {
-    const newStop: Stop = {
-      id: `new-${Date.now()}`,
+  const handleAddStop = (result: SearchResult) => {
+    const newStop = {
       name: result.name,
       address: result.address,
-      travelTime: "2h", // Mock data
-      travelDistance: "120 miles", // Mock data
+      lat: result.lat,
+      lng: result.lng,
+      travelTime: "2h", // This would be calculated by routing service
+      travelDistance: "120 miles", // This would be calculated by routing service
     };
     onAddStop(newStop);
-    setSearchResults([]);
     setSearchQuery("");
   };
 

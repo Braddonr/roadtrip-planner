@@ -11,25 +11,14 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Star, MapPin, Clock, Plus, X, Info } from "lucide-react";
+import { Star, MapPin, Clock, Plus, X, Info, Loader2 } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-
-interface Recommendation {
-  id: string;
-  name: string;
-  type: "attraction" | "restaurant" | "accommodation";
-  rating: number;
-  distance: string;
-  duration: string;
-  description: string;
-  imageUrl: string;
-  tags: string[];
-}
+import { Recommendation } from "@/types/trip";
 
 interface RecommendationsPanelProps {
   selectedStop?: string;
@@ -37,14 +26,16 @@ interface RecommendationsPanelProps {
   onAddToTrip?: (recommendation: Recommendation) => void;
   onDismiss?: (recommendationId: string) => void;
   onViewDetails?: (recommendation: Recommendation) => void;
+  isLoading?: boolean;
 }
 
 const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
   selectedStop = "Current Location",
-  recommendations = defaultRecommendations,
+  recommendations = [],
   onAddToTrip = () => {},
   onDismiss = () => {},
   onViewDetails = () => {},
+  isLoading = false,
 }) => {
   const [activeTab, setActiveTab] = useState<string>("all");
 
@@ -75,7 +66,12 @@ const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
       <CardContent className="p-0">
         <ScrollArea className="h-[220px] p-0">
           <div className="p-4 pt-0 space-y-3">
-            {filteredRecommendations.length > 0 ? (
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center h-[180px] text-center text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin mb-2" />
+                <p>Loading recommendations...</p>
+              </div>
+            ) : filteredRecommendations.length > 0 ? (
               filteredRecommendations.map((recommendation) => (
                 <RecommendationCard
                   key={recommendation.id}
@@ -203,72 +199,5 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
     </Card>
   );
 };
-
-// Default mock data
-const defaultRecommendations: Recommendation[] = [
-  {
-    id: "1",
-    name: "Grand Canyon Viewpoint",
-    type: "attraction",
-    rating: 4.8,
-    distance: "2.3 mi",
-    duration: "2-3 hrs",
-    description: "Spectacular views of the Grand Canyon from the South Rim.",
-    imageUrl:
-      "https://images.unsplash.com/photo-1615551043360-33de8b5f410c?w=300&q=80",
-    tags: ["Scenic View", "Nature", "Photography"],
-  },
-  {
-    id: "2",
-    name: "Desert Bloom Restaurant",
-    type: "restaurant",
-    rating: 4.5,
-    distance: "1.8 mi",
-    duration: "1-2 hrs",
-    description:
-      "Farm-to-table restaurant with southwestern cuisine and canyon views.",
-    imageUrl:
-      "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&q=80",
-    tags: ["Southwestern", "Outdoor Seating", "Views"],
-  },
-  {
-    id: "3",
-    name: "Canyon Lodge & Suites",
-    type: "accommodation",
-    rating: 4.6,
-    distance: "0.5 mi",
-    duration: "Overnight",
-    description:
-      "Comfortable lodge with rustic decor and modern amenities near the canyon rim.",
-    imageUrl:
-      "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=300&q=80",
-    tags: ["Lodge", "Free Breakfast", "Swimming Pool"],
-  },
-  {
-    id: "4",
-    name: "Bright Angel Hiking Trail",
-    type: "attraction",
-    rating: 4.9,
-    distance: "1.2 mi",
-    duration: "3-5 hrs",
-    description:
-      "Popular hiking trail with stunning views descending into the canyon.",
-    imageUrl:
-      "https://images.unsplash.com/photo-1547093349-65cdba98369a?w=300&q=80",
-    tags: ["Hiking", "Outdoor", "Challenging"],
-  },
-  {
-    id: "5",
-    name: "Canyon Brew House",
-    type: "restaurant",
-    rating: 4.3,
-    distance: "2.1 mi",
-    duration: "1-2 hrs",
-    description: "Craft brewery with local beers and casual dining options.",
-    imageUrl:
-      "https://images.unsplash.com/photo-1559329645-f8a5607d8f93?w=300&q=80",
-    tags: ["Craft Beer", "Casual", "Bar Food"],
-  },
-];
 
 export default RecommendationsPanel;
