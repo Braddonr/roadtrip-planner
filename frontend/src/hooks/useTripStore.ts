@@ -29,10 +29,16 @@ export const useTripStore = () => {
       const response = await apiService.getTrips();
       const trips = response.results || response;
 
+      // Ensure all trips have stops arrays initialized
+      const tripsWithStops = trips.map((trip: any) => ({
+        ...trip,
+        stops: trip.stops || [], // Initialize empty stops array if not present
+      }));
+
       setStore((prev) => ({
         ...prev,
-        allTrips: trips,
-        currentTrip: trips.length > 0 ? trips[0] : null, // Set first trip as current
+        allTrips: tripsWithStops,
+        currentTrip: tripsWithStops.length > 0 ? tripsWithStops[0] : null, // Set first trip as current
         isLoading: false,
       }));
     } catch (error: any) {
@@ -56,14 +62,20 @@ export const useTripStore = () => {
       try {
         const newTrip = await apiService.createTrip(tripData);
 
+        // Ensure the trip has a stops array initialized
+        const tripWithStops = {
+          ...newTrip,
+          stops: newTrip.stops || [], // Initialize empty stops array if not present
+        };
+
         setStore((prev) => ({
           ...prev,
-          allTrips: [newTrip, ...prev.allTrips],
-          currentTrip: newTrip, // Set new trip as current
+          allTrips: [tripWithStops, ...prev.allTrips],
+          currentTrip: tripWithStops, // Set new trip as current
           isLoading: false,
         }));
 
-        return newTrip;
+        return tripWithStops;
       } catch (error: any) {
         setStore((prev) => ({
           ...prev,
@@ -107,10 +119,11 @@ export const useTripStore = () => {
         setStore((prev) => {
           if (!prev.currentTrip) return prev;
 
+          const currentStops = prev.currentTrip.stops || [];
           const updatedTrip = {
             ...prev.currentTrip,
             stops: [
-              ...prev.currentTrip.stops,
+              ...currentStops,
               {
                 id: newStop.id.toString(),
                 name: newStop.name,
@@ -158,9 +171,10 @@ export const useTripStore = () => {
         setStore((prev) => {
           if (!prev.currentTrip) return prev;
 
+          const currentStops = prev.currentTrip.stops || [];
           const updatedTrip = {
             ...prev.currentTrip,
-            stops: prev.currentTrip.stops.filter((stop) => stop.id !== stopId),
+            stops: currentStops.filter((stop) => stop.id !== stopId),
             updatedAt: new Date(),
           };
 
@@ -248,7 +262,12 @@ export const useTripStore = () => {
   // Calculate trip statistics using routing API
   const calculateTripStats = useCallback(async () => {
     setStore((prev) => {
-      if (!prev.currentTrip || prev.currentTrip.stops.length < 2) return prev;
+      if (
+        !prev.currentTrip ||
+        !prev.currentTrip.stops ||
+        prev.currentTrip.stops.length < 2
+      )
+        return prev;
 
       const waypoints = prev.currentTrip.stops
         .filter((stop) => stop.lat && stop.lng)
@@ -322,8 +341,8 @@ export const useTripStore = () => {
               .map((type) =>
                 type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
               ),
-            lat: place.geometry.location.lat,
-            lng: place.geometry.location.lng,
+            lat: place.latitude || place.geometry?.location?.lat || 0,
+            lng: place.longitude || place.geometry?.location?.lng || 0,
             priceLevel: place.price_level,
           })
         );
@@ -346,7 +365,7 @@ export const useTripStore = () => {
 
   // Load weather forecasts
   const loadWeatherForecasts = useCallback(async () => {
-    if (!store.currentTrip?.stops.length) return;
+    if (!store.currentTrip?.stops || !store.currentTrip.stops.length) return;
 
     setStore((prev) => ({ ...prev, isLoading: true }));
 
@@ -387,8 +406,10 @@ export const useTripStore = () => {
 
   // Auto-calculate stats when stops change
   useEffect(() => {
-    calculateTripStats();
-  }, [store.currentTrip?.stops, calculateTripStats]);
+    if (store.currentTrip?.stops && store.currentTrip.stops.length >= 2) {
+      calculateTripStats();
+    }
+  }, [store.currentTrip?.stops?.length, calculateTripStats]);
 
   return {
     ...store,

@@ -7,8 +7,11 @@ import {
   ChevronDown,
   MapPin,
   Clock,
-  Car,
+  Car as CarIcon,
   Trash2,
+  Calendar,
+  DollarSign,
+  Fuel,
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { Button } from "@/components/ui/button";
@@ -17,8 +20,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
+import { CustomSelect } from "@/components/ui/custom-select";
 import { Stop } from "@/types/trip";
 import { SearchResult } from "@/types/trip";
+import {
+  cars,
+  getCarsByType,
+  getCarById,
+  formatCarName,
+  Car,
+} from "@/data/cars";
 
 interface ItineraryPanelProps {
   stops: Stop[];
@@ -30,7 +42,15 @@ interface ItineraryPanelProps {
   searchResults?: SearchResult[];
   isSearching?: boolean;
   onSearch?: (query: string) => void;
-  onCreateTrip?: (tripData: { name: string; description?: string }) => void;
+  onCreateTrip?: (tripData: {
+    name: string;
+    description?: string;
+    route_type?: string;
+    start_date?: string;
+    end_date?: string;
+    fuel_efficiency?: number;
+    fuel_price_per_gallon?: number;
+  }) => void;
   hasCurrentTrip?: boolean;
   isLoading?: boolean;
 }
@@ -53,6 +73,41 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
   const [showCreateTrip, setShowCreateTrip] = useState(!hasCurrentTrip);
   const [tripName, setTripName] = useState("");
   const [tripDescription, setTripDescription] = useState("");
+  const [routeType, setRouteType] = useState("fastest");
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [selectedCar, setSelectedCar] = useState("toyota-camry-2024");
+  const [customMake, setCustomMake] = useState("");
+  const [customModel, setCustomModel] = useState("");
+  const [customYear, setCustomYear] = useState("");
+  const [customMpg, setCustomMpg] = useState("25");
+  const [fuelPrice, setFuelPrice] = useState("3.50");
+
+  // Prepare car options for the searchable combobox
+  const carOptions = React.useMemo(() => {
+    const options = cars
+      .filter(car => car.id !== 'custom')
+      .map(car => ({
+        value: car.id,
+        label: formatCarName(car),
+        group: car.type === 'sedan' ? 'Sedans' :
+               car.type === 'suv' ? 'SUVs' :
+               car.type === 'truck' ? 'Trucks' :
+               car.type === 'hybrid' ? 'Hybrids' :
+               car.type === 'electric' ? 'Electric' :
+               car.type === 'hatchback' ? 'Hatchbacks' :
+               car.type === 'coupe' ? 'Sports Cars' : 'Other'
+      }));
+    
+    // Add custom option at the end
+    options.push({
+      value: 'custom',
+      label: 'Custom - Enter your custom mpg',
+      group: 'Custom'
+    });
+    
+    return options;
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,12 +142,33 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
   const handleCreateTrip = (e: React.FormEvent) => {
     e.preventDefault();
     if (onCreateTrip && tripName.trim()) {
+      // Get MPG from selected car or custom input
+      const selectedCarData = getCarById(selectedCar);
+      const mpg =
+        selectedCar === "custom"
+          ? parseFloat(customMpg)
+          : selectedCarData?.mpg || 25;
+
       onCreateTrip({
         name: tripName,
         description: tripDescription || undefined,
+        route_type: routeType,
+        start_date: startDate
+          ? startDate.toISOString().split("T")[0]
+          : undefined,
+        end_date: endDate ? endDate.toISOString().split("T")[0] : undefined,
+        fuel_efficiency: mpg,
+        fuel_price_per_gallon: parseFloat(fuelPrice),
       });
+      // Reset form
       setTripName("");
       setTripDescription("");
+      setRouteType("fastest");
+      setStartDate(undefined);
+      setEndDate(undefined);
+      setSelectedCar("toyota-camry-2024");
+      setCustomMpg("25");
+      setFuelPrice("3.50");
       setShowCreateTrip(false);
     }
   };
@@ -103,59 +179,193 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
       <div className="h-full w-[350px] bg-background border-r flex flex-col">
         <div className="p-4 border-b">
           <h2 className="text-xl font-bold mb-4">Create New Trip</h2>
-          
-          <form onSubmit={handleCreateTrip} className="space-y-4">
-            <div>
-              <Label htmlFor="trip-name">Trip Name</Label>
-              <Input
-                id="trip-name"
-                type="text"
-                placeholder="e.g., California Coast Road Trip"
-                value={tripName}
-                onChange={(e) => setTripName(e.target.value)}
-                required
-                disabled={isLoading}
-              />
+
+          <form
+            onSubmit={handleCreateTrip}
+            className="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto"
+          >
+            {/* Basic Trip Information */}
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="trip-name">Trip Name *</Label>
+                <Input
+                  id="trip-name"
+                  type="text"
+                  placeholder="e.g., California Coast Road Trip"
+                  value={tripName}
+                  onChange={(e) => setTripName(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="trip-description">Description</Label>
+                <Input
+                  id="trip-description"
+                  type="text"
+                  placeholder="Brief description of your trip"
+                  value={tripDescription}
+                  onChange={(e) => setTripDescription(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
             </div>
-            
+
+            {/* Route Type - One Line */}
             <div>
-              <Label htmlFor="trip-description">Description (Optional)</Label>
-              <Input
-                id="trip-description"
-                type="text"
-                placeholder="Brief description of your trip"
-                value={tripDescription}
-                onChange={(e) => setTripDescription(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-            
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading || !tripName.trim()}
-            >
-              {isLoading ? "Creating..." : "Create Trip"}
-            </Button>
-            
-            {hasCurrentTrip && (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => setShowCreateTrip(false)}
+              <Label className="text-sm font-medium mb-2 block">
+                Route Type
+              </Label>
+              <RadioGroup
+                value={routeType}
+                onValueChange={setRouteType}
+                className="flex flex-row space-x-4"
                 disabled={isLoading}
               >
-                Cancel
+                <div className="flex items-center space-x-1">
+                  <RadioGroupItem value="fastest" id="create-fastest" />
+                  <Label htmlFor="create-fastest" className="text-sm">
+                    Fastest
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <RadioGroupItem value="scenic" id="create-scenic" />
+                  <Label htmlFor="create-scenic" className="text-sm">
+                    Scenic
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <RadioGroupItem value="custom" id="create-custom" />
+                  <Label htmlFor="create-custom" className="text-sm">
+                    Custom
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            {/* Trip Dates */}
+            <div className="space-y-3">
+              <div>
+                <Label className="text-sm font-medium mb-2 block">
+                  <Calendar className="inline h-4 w-4 mr-1" />
+                  Start Date
+                </Label>
+                <DatePicker
+                  date={startDate}
+                  onDateChange={setStartDate}
+                  placeholder="Select start date"
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium mb-2 block">
+                  <Calendar className="inline h-4 w-4 mr-1" />
+                  End Date
+                </Label>
+                <DatePicker
+                  date={endDate}
+                  onDateChange={setEndDate}
+                  placeholder="Select end date"
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            {/* Vehicle & Fuel Settings */}
+            <div className="space-y-3">
+              <div>
+                <Label className="text-sm font-medium mb-2 block">
+                  <CarIcon className="inline h-4 w-4 mr-1" />
+                  Select Your Vehicle
+                </Label>
+                <CustomSelect
+                  options={carOptions}
+                  value={selectedCar}
+                  onValueChange={setSelectedCar}
+                  placeholder="Search for your car..."
+                  disabled={isLoading}
+                />
+              </div>
+
+              {/* Custom MPG input - only show when "custom" is selected */}
+              {selectedCar === "custom" && (
+                <div>
+                  <Label
+                    htmlFor="custom-mpg"
+                    className="text-sm font-medium mb-2 block"
+                  >
+                    <Fuel className="inline h-4 w-4 mr-1" />
+                    Custom Fuel Efficiency (MPG)
+                  </Label>
+                  <Input
+                    id="custom-mpg"
+                    type="number"
+                    min="5"
+                    max="150"
+                    step="0.1"
+                    placeholder="25.0"
+                    value={customMpg}
+                    onChange={(e) => setCustomMpg(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+              )}
+
+              <div>
+                <Label
+                  htmlFor="fuel-price"
+                  className="text-sm font-medium mb-2 block"
+                >
+                  <DollarSign className="inline h-4 w-4 mr-1" />
+                  Fuel Price per Gallon ($)
+                </Label>
+                <Input
+                  id="fuel-price"
+                  type="number"
+                  min="1"
+                  max="10"
+                  step="0.01"
+                  placeholder="3.50"
+                  value={fuelPrice}
+                  onChange={(e) => setFuelPrice(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-2 pt-4">
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isLoading || !tripName.trim()}
+              >
+                {isLoading ? "Creating..." : "Create Trip"}
               </Button>
-            )}
+
+              {hasCurrentTrip && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowCreateTrip(false)}
+                  disabled={isLoading}
+                >
+                  Cancel
+                </Button>
+              )}
+            </div>
           </form>
         </div>
-        
+
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="text-center text-muted-foreground">
             <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-sm">Create your first trip to start planning your adventure!</p>
+            <p className="text-sm">
+              Create your first trip to start planning your adventure!
+            </p>
           </div>
         </div>
       </div>
@@ -317,7 +527,7 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
 
                         {index < stops.length - 1 && (
                           <div className="px-3 py-2 border-t bg-muted/30 text-xs flex items-center">
-                            <Car className="h-3 w-3 mr-1 text-muted-foreground" />
+                            <CarIcon className="h-3 w-3 mr-1 text-muted-foreground" />
                             <span className="text-muted-foreground">
                               {stops[index + 1].travelTime} (
                               {stops[index + 1].travelDistance})
