@@ -190,7 +190,19 @@ export default function Home() {
               })) || []
             }
             selectedRouteType={tripStore.currentTrip?.routeType || "fastest"}
+            searchResults={search.results}
             onRouteTypeChange={tripStore.updateRouteType}
+            onSearchResultClick={(result) => {
+              // Add search result as a stop to the current trip
+              if (tripStore.currentTrip) {
+                tripStore.addStop({
+                  name: result.name,
+                  address: result.address,
+                  lat: result.lat,
+                  lng: result.lng,
+                });
+              }
+            }}
           />
 
           {/* Map Controls */}

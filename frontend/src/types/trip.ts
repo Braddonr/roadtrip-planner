@@ -59,4 +59,5 @@ export interface SearchResult {
   lng: number;
   type: string;
   rating?: number;
+  categories?: string[];
 }
