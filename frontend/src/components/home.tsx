@@ -35,8 +35,17 @@ export default function Home() {
   // Load initial data
   useEffect(() => {
     // Load trips from backend when component mounts
+    console.log('Home: Loading trips on mount');
     tripStore.loadTrips();
   }, []);
+
+  // Debug: Log when allTrips changes
+  useEffect(() => {
+    console.log('Home: allTrips changed:', tripStore.allTrips.length, 'trips');
+    console.log('Home: allTrips data:', tripStore.allTrips);
+    console.log('Home: currentTrip:', tripStore.currentTrip);
+    console.log('Home: hasExistingTrips will be:', tripStore.allTrips.length > 0);
+  }, [tripStore.allTrips]);
 
   // Load weather and recommendations when current trip changes
   useEffect(() => {
@@ -160,8 +169,12 @@ export default function Home() {
                 console.error("Failed to create trip:", error);
               }
             }}
-            hasCurrentTrip={!!tripStore.currentTrip}
+            hasExistingTrips={tripStore.allTrips.length > 0}
             isLoading={tripStore.isLoading}
+            // New props for trip management
+            allTrips={tripStore.allTrips}
+            currentTrip={tripStore.currentTrip}
+            onSelectTrip={tripStore.setCurrentTrip}
           />
         </motion.div>
 

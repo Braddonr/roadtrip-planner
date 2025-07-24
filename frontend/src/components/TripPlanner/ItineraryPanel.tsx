@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Search,
   Plus,
@@ -22,7 +22,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
 import { CustomSelect } from "@/components/ui/custom-select";
-import { Stop } from "@/types/trip";
+import { Stop, Trip } from "@/types/trip";
 import { SearchResult } from "@/types/trip";
 import {
   cars,
@@ -51,8 +51,12 @@ interface ItineraryPanelProps {
     fuel_efficiency?: number;
     fuel_price_per_gallon?: number;
   }) => void;
-  hasCurrentTrip?: boolean;
+  hasExistingTrips?: boolean;
   isLoading?: boolean;
+  // New props for trip management
+  allTrips?: Trip[];
+  currentTrip?: Trip | null;
+  onSelectTrip?: (trip: Trip) => void;
 }
 
 const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
@@ -66,11 +70,15 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
   isSearching = false,
   onSearch,
   onCreateTrip,
-  hasCurrentTrip = true,
+  hasExistingTrips = false,
   isLoading = false,
+  // New props for trip management
+  allTrips = [],
+  currentTrip,
+  onSelectTrip,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [showCreateTrip, setShowCreateTrip] = useState(!hasCurrentTrip);
+  const [showCreateTrip, setShowCreateTrip] = useState(!hasExistingTrips);
   const [tripName, setTripName] = useState("");
   const [tripDescription, setTripDescription] = useState("");
   const [routeType, setRouteType] = useState("fastest");
@@ -83,29 +91,50 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
   const [customMpg, setCustomMpg] = useState("25");
   const [fuelPrice, setFuelPrice] = useState("3.50");
 
+  // Update showCreateTrip when hasExistingTrips changes (e.g., when trips are loaded)
+  useEffect(() => {
+    // Only update if not loading to avoid flickering
+    if (!isLoading) {
+      console.log(
+        "ItineraryPanel: hasExistingTrips changed to:",
+        hasExistingTrips
+      );
+      setShowCreateTrip(!hasExistingTrips);
+    }
+  }, [hasExistingTrips, isLoading]);
+
   // Prepare car options for the searchable combobox
   const carOptions = React.useMemo(() => {
     const options = cars
-      .filter(car => car.id !== 'custom')
-      .map(car => ({
+      .filter((car) => car.id !== "custom")
+      .map((car) => ({
         value: car.id,
         label: formatCarName(car),
-        group: car.type === 'sedan' ? 'Sedans' :
-               car.type === 'suv' ? 'SUVs' :
-               car.type === 'truck' ? 'Trucks' :
-               car.type === 'hybrid' ? 'Hybrids' :
-               car.type === 'electric' ? 'Electric' :
-               car.type === 'hatchback' ? 'Hatchbacks' :
-               car.type === 'coupe' ? 'Sports Cars' : 'Other'
+        group:
+          car.type === "sedan"
+            ? "Sedans"
+            : car.type === "suv"
+            ? "SUVs"
+            : car.type === "truck"
+            ? "Trucks"
+            : car.type === "hybrid"
+            ? "Hybrids"
+            : car.type === "electric"
+            ? "Electric"
+            : car.type === "hatchback"
+            ? "Hatchbacks"
+            : car.type === "coupe"
+            ? "Sports Cars"
+            : "Other",
       }));
-    
+
     // Add custom option at the end
     options.push({
-      value: 'custom',
-      label: 'Custom - Enter your custom mpg',
-      group: 'Custom'
+      value: "custom",
+      label: "Custom - Enter your custom mpg",
+      group: "Custom",
     });
-    
+
     return options;
   }, []);
 
@@ -173,8 +202,8 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
     }
   };
 
-  // Show create trip interface if no current trip
-  if (!hasCurrentTrip || showCreateTrip) {
+  // Show create trip interface if no existing trips or user wants to create new trip
+  if (!hasExistingTrips || showCreateTrip) {
     return (
       <div className="h-full w-[350px] bg-background border-r flex flex-col">
         <div className="p-4 border-b">
@@ -345,7 +374,7 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
                 {isLoading ? "Creating..." : "Create Trip"}
               </Button>
 
-              {hasCurrentTrip && (
+              {hasExistingTrips && (
                 <Button
                   type="button"
                   variant="outline"
@@ -387,6 +416,66 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
             New Trip
           </Button>
         </div>
+
+        {/* Trip Selector */}
+        {isLoading && allTrips.length === 0 ? (
+          <div className="mb-4">
+            <Label className="text-sm font-medium mb-2 block">
+              Loading trips...
+            </Label>
+            <div className="p-4 text-center text-muted-foreground">
+              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
+            </div>
+          </div>
+        ) : allTrips.length > 0 ? (
+          <div className="mb-4">
+            <Label className="text-sm font-medium mb-2 block">
+              Select Trip ({allTrips.length} available)
+            </Label>
+            <div className="space-y-2 max-h-32 overflow-y-auto">
+              {allTrips.map((trip) => (
+                <div
+                  key={trip.id}
+                  className={`p-2 rounded-md border cursor-pointer transition-colors ${
+                    currentTrip?.id === trip.id
+                      ? "bg-primary/10 border-primary"
+                      : "bg-card hover:bg-accent border-border"
+                  }`}
+                  onClick={() => onSelectTrip?.(trip)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">
+                        {trip.name}
+                      </p>
+                      {trip.description && (
+                        <p className="text-xs text-muted-foreground truncate">
+                          {trip.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-muted-foreground">
+                          {trip.stops?.length || 0} stops
+                        </span>
+                        {(trip.start_date || trip.startDate) && (
+                          <span className="text-xs text-muted-foreground">
+                            •{" "}
+                            {new Date(
+                              trip.start_date || trip.startDate
+                            ).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {currentTrip?.id === trip.id && (
+                      <div className="w-2 h-2 bg-primary rounded-full ml-2 flex-shrink-0" />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <form onSubmit={handleSearch} className="relative">
           <div className="relative">

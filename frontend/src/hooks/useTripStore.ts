@@ -28,6 +28,8 @@ export const useTripStore = () => {
     try {
       const response = await apiService.getTrips();
       const trips = response.results || response;
+      console.log("This are the trips we have:", trips);
+      
 
       // Ensure all trips have stops arrays initialized
       const tripsWithStops = trips.map((trip: any) => ({
