@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Star, MapPin, Clock, Plus, X, Info, Loader2 } from "lucide-react";
+import { Star, MapPin, Clock, Plus, X, Info, Loader2, RefreshCw } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -27,6 +27,8 @@ interface RecommendationsPanelProps {
   onDismiss?: (recommendationId: string) => void;
   onViewDetails?: (recommendation: Recommendation) => void;
   isLoading?: boolean;
+  currentTrip?: any;
+  onLoadRecommendations?: (lat: number, lng: number) => void;
 }
 
 const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
@@ -36,6 +38,8 @@ const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
   onDismiss = () => {},
   onViewDetails = () => {},
   isLoading = false,
+  currentTrip,
+  onLoadRecommendations = () => {},
 }) => {
   const [activeTab, setActiveTab] = useState<string>("all");
 
@@ -47,8 +51,37 @@ const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
   return (
     <Card className="w-full h-full bg-white border rounded-lg shadow-sm overflow-hidden">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-semibold">Recommendations</CardTitle>
-        <CardDescription>Suggested places near {selectedStop}</CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-lg font-semibold">Recommendations</CardTitle>
+            <CardDescription>Suggested places near {selectedStop}</CardDescription>
+          </div>
+          {currentTrip?.stops && currentTrip.stops.length > 0 && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={() => {
+                      const lastStop = currentTrip.stops[currentTrip.stops.length - 1];
+                      if (lastStop?.lat && lastStop?.lng) {
+                        onLoadRecommendations(lastStop.lat, lastStop.lng);
+                      }
+                    }}
+                    disabled={isLoading}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Refresh recommendations</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
         <Tabs
           defaultValue="all"
           value={activeTab}

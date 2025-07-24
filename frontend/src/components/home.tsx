@@ -20,6 +20,7 @@ import {
 import { useTripStore } from "../hooks/useTripStore";
 import { useSearch } from "../hooks/useSearch";
 import { useAuth } from "../contexts/AuthContext";
+import { SearchAutocomplete } from "./ui/search-autocomplete";
 
 export default function Home() {
   const tripStore = useTripStore();
@@ -50,25 +51,45 @@ export default function Home() {
   // Load weather and recommendations when current trip changes
   useEffect(() => {
     if (tripStore.currentTrip) {
+      console.log('Home: Current trip changed, loading data for:', tripStore.currentTrip.name);
       tripStore.loadWeatherForecasts();
-      if (
-        tripStore.currentTrip.stops &&
-        tripStore.currentTrip.stops.length > 0
-      ) {
-        const lastStop =
-          tripStore.currentTrip.stops[tripStore.currentTrip.stops.length - 1];
+      
+      // Load recommendations based on the last stop or first stop if available
+      if (tripStore.currentTrip.stops && tripStore.currentTrip.stops.length > 0) {
+        const lastStop = tripStore.currentTrip.stops[tripStore.currentTrip.stops.length - 1];
         if (lastStop.lat && lastStop.lng) {
+          console.log('Home: Loading recommendations for last stop:', lastStop.name);
           tripStore.loadRecommendations(lastStop.lat, lastStop.lng);
         }
+      } else {
+        // If no stops, try to load recommendations for a default location (e.g., trip's general area)
+        console.log('Home: No stops in current trip, loading general recommendations');
+        // Load recommendations for a default location (e.g., center of USA)
+        tripStore.loadRecommendations(39.8283, -98.5795);
       }
     }
-  }, [tripStore.currentTrip]);
+  }, [tripStore.currentTrip?.id, tripStore.currentTrip?.stops?.length]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       search.searchPlaces(searchQuery);
     }
+  };
+
+  // Handle search result selection from header search
+  const handleHeaderSearchSelect = (result: any) => {
+    // Add the selected result as a stop to the current trip
+    if (tripStore.currentTrip) {
+      tripStore.addStop({
+        name: result.name,
+        address: result.address,
+        lat: result.lat,
+        lng: result.lng,
+      });
+    }
+    // Clear the search query
+    setSearchQuery("");
   };
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -92,21 +113,16 @@ export default function Home() {
         </div>
 
         <div className="flex items-center space-x-2">
-          <form
-            onSubmit={handleSearch}
-            className="relative rounded-md shadow-sm max-w-xs hidden md:block"
-          >
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <Search className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full rounded-md border-0 py-1.5 pl-10 pr-4 text-sm ring-1 ring-inset ring-input bg-background"
+          <div className="max-w-xs hidden md:block">
+            <SearchAutocomplete
               placeholder="Search destinations..."
+              onSearch={search.searchPlaces}
+              onResultSelect={handleHeaderSearchSelect}
+              searchResults={search.results}
+              isSearching={search.isLoading}
+              className="w-64"
             />
-          </form>
+          </div>
           <Button variant="ghost" size="icon">
             <Bell className="h-5 w-5" />
           </Button>
@@ -242,11 +258,9 @@ export default function Home() {
         >
           <RecommendationsPanel
             selectedStop={
-              selectedStopId
-                ? tripStore.currentTrip?.stops?.find(
-                    (s) => s.id === selectedStopId
-                  )?.name || "Current Location"
-                : "Current Location"
+              tripStore.currentTrip?.stops && tripStore.currentTrip.stops.length > 0
+                ? tripStore.currentTrip.stops[tripStore.currentTrip.stops.length - 1]?.name || "Current Location"
+                : tripStore.currentTrip?.name || "Current Location"
             }
             recommendations={tripStore.recommendations}
             onAddToTrip={(rec) =>
@@ -258,6 +272,8 @@ export default function Home() {
               })
             }
             isLoading={tripStore.isLoading}
+            currentTrip={tripStore.currentTrip}
+            onLoadRecommendations={(lat, lng) => tripStore.loadRecommendations(lat, lng)}
           />
         </motion.div>
       </div>
@@ -274,6 +290,16 @@ export default function Home() {
           totalTime={tripStore.currentTrip?.totalTime || 0}
           estimatedFuelCost={tripStore.currentTrip?.estimatedFuelCost || 0}
           weatherForecasts={tripStore.weatherForecasts}
+          completionPercentage={
+            // Calculate completion based on trip data
+            tripStore.currentTrip ? 
+              Math.min(100, 
+                (tripStore.currentTrip.stops?.length || 0) * 20 + // 20% per stop (up to 5 stops = 100%)
+                (tripStore.currentTrip.startDate ? 15 : 0) + // 15% for start date
+                (tripStore.currentTrip.endDate ? 15 : 0) + // 15% for end date
+                (tripStore.currentTrip.totalDistance > 0 ? 10 : 0) // 10% for route calculation
+              ) : 0
+          }
           startDate={tripStore.currentTrip?.startDate}
           endDate={tripStore.currentTrip?.endDate}
           onSave={() => console.log("Saving trip...", tripStore.currentTrip)}

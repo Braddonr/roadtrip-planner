@@ -31,6 +31,7 @@ import {
   formatCarName,
   Car,
 } from "@/data/cars";
+import { SearchAutocomplete } from "@/components/ui/search-autocomplete";
 
 interface ItineraryPanelProps {
   stops: Stop[];
@@ -77,7 +78,7 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
   currentTrip,
   onSelectTrip,
 }) => {
-  const [searchQuery, setSearchQuery] = useState("");
+
   const [showCreateTrip, setShowCreateTrip] = useState(!hasExistingTrips);
   const [tripName, setTripName] = useState("");
   const [tripDescription, setTripDescription] = useState("");
@@ -138,13 +139,6 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
     return options;
   }, []);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (onSearch && searchQuery.trim()) {
-      onSearch(searchQuery);
-    }
-  };
-
   const handleAddStop = (result: SearchResult) => {
     const newStop = {
       name: result.name,
@@ -155,7 +149,6 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
       travelDistance: "120 miles", // This would be calculated by routing service
     };
     onAddStop(newStop);
-    setSearchQuery("");
   };
 
   const handleDragEnd = (result: any) => {
@@ -477,59 +470,14 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
           </div>
         ) : null}
 
-        <form onSubmit={handleSearch} className="relative">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search for a destination"
-              className="pl-9 pr-4"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-          <Button
-            type="submit"
-            className="w-full mt-2"
-            disabled={isSearching || !searchQuery}
-          >
-            {isSearching ? "Searching..." : "Search"}
-          </Button>
-        </form>
-
-        {searchResults.length > 0 && (
-          <Card className="mt-2">
-            <CardContent className="p-2">
-              <p className="text-sm text-muted-foreground mb-2">
-                Search Results
-              </p>
-              {searchResults.map((result) => (
-                <div
-                  key={result.id}
-                  className="p-2 hover:bg-accent rounded-md cursor-pointer flex items-center justify-between"
-                  onClick={() => handleAddStop(result)}
-                >
-                  <div>
-                    <p className="font-medium">{result.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {result.address}
-                    </p>
-                  </div>
-                  <Plus className="h-4 w-4" />
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
+        <SearchAutocomplete
+          placeholder="Search for a destination"
+          onSearch={onSearch || (() => {})}
+          onResultSelect={handleAddStop}
+          searchResults={searchResults}
+          isSearching={isSearching}
+          className="mb-4"
+        />
 
         <div className="mt-4">
           <p className="text-sm font-medium mb-2">Route Type</p>
