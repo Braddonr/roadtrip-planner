@@ -26,7 +26,6 @@ export default function Home() {
   const tripStore = useTripStore();
   const search = useSearch();
   const { user, logout } = useAuth();
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
 
   const handleLogout = async () => {
@@ -70,13 +69,6 @@ export default function Home() {
     }
   }, [tripStore.currentTrip?.id, tripStore.currentTrip?.stops?.length]);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      search.searchPlaces(searchQuery);
-    }
-  };
-
   // Handle search result selection from header search
   const handleHeaderSearchSelect = (result: any) => {
     // Add the selected result as a stop to the current trip
@@ -88,8 +80,6 @@ export default function Home() {
         lng: result.lng,
       });
     }
-    // Clear the search query
-    setSearchQuery("");
   };
   return (
     <div className="flex flex-col h-screen bg-background">

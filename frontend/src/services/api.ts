@@ -183,6 +183,11 @@ class ApiService {
     route_type?: string;
     start_date?: string;
     end_date?: string;
+    fuel_efficiency?: number;
+    fuel_price_per_gallon?: number;
+    vehicle_make?: string;
+    vehicle_model?: string;
+    vehicle_year?: string;
   }) {
     try {
       return await makeAuthenticatedRequest(`${this.baseUrl}/trips/`, {

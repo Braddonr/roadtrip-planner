@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Search,
   Plus,
@@ -21,7 +21,7 @@ import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
-import { CustomSelect } from "@/components/ui/custom-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Stop, Trip } from "@/types/trip";
 import { SearchResult } from "@/types/trip";
 import {
@@ -51,6 +51,9 @@ interface ItineraryPanelProps {
     end_date?: string;
     fuel_efficiency?: number;
     fuel_price_per_gallon?: number;
+    vehicle_make?: string;
+    vehicle_model?: string;
+    vehicle_year?: string;
   }) => void;
   hasExistingTrips?: boolean;
   isLoading?: boolean;
@@ -105,7 +108,7 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
   }, [hasExistingTrips, isLoading]);
 
   // Prepare car options for the searchable combobox
-  const carOptions = React.useMemo(() => {
+  const carOptions = useMemo(() => {
     const options = cars
       .filter((car) => car.id !== "custom")
       .map((car) => ({
@@ -170,6 +173,24 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
         selectedCar === "custom"
           ? parseFloat(customMpg)
           : selectedCarData?.mpg || 25;
+      
+      // Prepare vehicle information for the backend
+      let vehicleInfo = {};
+      if (selectedCar === "custom") {
+        // Include custom vehicle details
+        vehicleInfo = {
+          vehicle_make: customMake || "Custom",
+          vehicle_model: customModel || "Vehicle",
+          vehicle_year: customYear || "N/A",
+        };
+      } else if (selectedCarData) {
+        // Include selected vehicle details
+        vehicleInfo = {
+          vehicle_make: selectedCarData.make,
+          vehicle_model: selectedCarData.model,
+          vehicle_year: selectedCarData.year,
+        };
+      }
 
       onCreateTrip({
         name: tripName,
@@ -181,6 +202,7 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
         end_date: endDate ? endDate.toISOString().split("T")[0] : undefined,
         fuel_efficiency: mpg,
         fuel_price_per_gallon: parseFloat(fuelPrice),
+        ...vehicleInfo, // Include vehicle information
       });
       // Reset form
       setTripName("");
@@ -189,6 +211,9 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
       setStartDate(undefined);
       setEndDate(undefined);
       setSelectedCar("toyota-camry-2024");
+      setCustomMake("");
+      setCustomModel("");
+      setCustomYear("");
       setCustomMpg("25");
       setFuelPrice("3.50");
       setShowCreateTrip(false);
@@ -302,36 +327,100 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
                   <CarIcon className="inline h-4 w-4 mr-1" />
                   Select Your Vehicle
                 </Label>
-                <CustomSelect
-                  options={carOptions}
+                <Select
                   value={selectedCar}
                   onValueChange={setSelectedCar}
-                  placeholder="Search for your car..."
                   disabled={isLoading}
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Search for your car..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {carOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {/* Custom MPG input - only show when "custom" is selected */}
+              {/* Custom car form - only show when "custom" is selected */}
               {selectedCar === "custom" && (
-                <div>
-                  <Label
-                    htmlFor="custom-mpg"
-                    className="text-sm font-medium mb-2 block"
-                  >
-                    <Fuel className="inline h-4 w-4 mr-1" />
-                    Custom Fuel Efficiency (MPG)
-                  </Label>
-                  <Input
-                    id="custom-mpg"
-                    type="number"
-                    min="5"
-                    max="150"
-                    step="0.1"
-                    placeholder="25.0"
-                    value={customMpg}
-                    onChange={(e) => setCustomMpg(e.target.value)}
-                    disabled={isLoading}
-                  />
+                <div className="space-y-3 border rounded-md p-3 bg-muted/30">
+                  <h4 className="text-sm font-medium">Enter Your Vehicle Details</h4>
+                  
+                  <div>
+                    <Label
+                      htmlFor="custom-make"
+                      className="text-sm font-medium mb-1 block"
+                    >
+                      Make
+                    </Label>
+                    <Input
+                      id="custom-make"
+                      type="text"
+                      placeholder="Toyota, Honda, Ford, etc."
+                      value={customMake}
+                      onChange={(e) => setCustomMake(e.target.value)}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label
+                      htmlFor="custom-model"
+                      className="text-sm font-medium mb-1 block"
+                    >
+                      Model
+                    </Label>
+                    <Input
+                      id="custom-model"
+                      type="text"
+                      placeholder="Camry, Civic, F-150, etc."
+                      value={customModel}
+                      onChange={(e) => setCustomModel(e.target.value)}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label
+                      htmlFor="custom-year"
+                      className="text-sm font-medium mb-1 block"
+                    >
+                      Year
+                    </Label>
+                    <Input
+                      id="custom-year"
+                      type="text"
+                      placeholder="2024, 2023, etc."
+                      value={customYear}
+                      onChange={(e) => setCustomYear(e.target.value)}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label
+                      htmlFor="custom-mpg"
+                      className="text-sm font-medium mb-1 block"
+                    >
+                      <Fuel className="inline h-4 w-4 mr-1" />
+                      Fuel Efficiency (MPG)
+                    </Label>
+                    <Input
+                      id="custom-mpg"
+                      type="number"
+                      min="5"
+                      max="150"
+                      step="0.1"
+                      placeholder="25.0"
+                      value={customMpg}
+                      onChange={(e) => setCustomMpg(e.target.value)}
+                      disabled={isLoading}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -586,13 +675,24 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
         <div className="flex justify-between items-center">
           <div>
             <p className="text-sm font-medium">Total Distance</p>
-            <p className="text-lg font-bold">408 miles</p>
+            <p className="text-lg font-bold">
+              {currentTrip?.totalDistance ? `${currentTrip.totalDistance} miles` : '--'}
+            </p>
           </div>
           <div>
             <p className="text-sm font-medium">Total Time</p>
-            <p className="text-lg font-bold">8h</p>
+            <p className="text-lg font-bold">
+              {currentTrip?.totalTime ? `${currentTrip.totalTime}h` : '--'}
+            </p>
           </div>
         </div>
+        {currentTrip?.estimatedFuelCost && (
+          <div className="mt-2 text-center">
+            <p className="text-xs text-muted-foreground">
+              Est. Fuel Cost: <span className="font-medium">${currentTrip.estimatedFuelCost}</span>
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
