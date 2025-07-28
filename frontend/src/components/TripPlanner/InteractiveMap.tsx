@@ -51,6 +51,21 @@ interface InteractiveMapProps {
     type: "start" | "stop" | "destination";
   }) => void;
   onCreateTrip?: (trip: Omit<Trip, "id" | "createdAt" | "updatedAt">) => void;
+  // New props for enhanced functionality
+  initialMarkers?: Array<{
+    id: string;
+    name: string;
+    lat: number;
+    lng: number;
+    type: "start" | "stop" | "destination";
+  }>;
+  onMarkersChange?: (markers: Array<{
+    id: string;
+    name: string;
+    lat: number;
+    lng: number;
+    type: "start" | "stop" | "destination";
+  }>) => void;
 }
 
 const InteractiveMap: React.FC<InteractiveMapProps> = ({
@@ -67,6 +82,8 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
   onClearFocus = () => {},
   onAddMarker = () => {},
   onCreateTrip = () => {},
+  initialMarkers = [],
+  onMarkersChange = () => {},
 }) => {
   const [zoom, setZoom] = useState(5);
   const [mapType, setMapType] = useState("streets-v11");

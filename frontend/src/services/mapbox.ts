@@ -375,6 +375,159 @@ class MapboxService {
     }
   }
 
+  // Search for Points of Interest (restaurants, attractions, accommodations) near a location
+  async searchPOI(
+    latitude: number,
+    longitude: number,
+    type: 'restaurant' | 'attraction' | 'accommodation',
+    options?: {
+      radius?: number; // in meters, default 5000
+      limit?: number; // default 10
+    }
+  ): Promise<Array<{
+    id: string;
+    name: string;
+    type: 'restaurant' | 'attraction' | 'accommodation';
+    rating?: number;
+    distance: string;
+    duration: string;
+    description: string;
+    imageUrl: string;
+    tags: string[];
+    lat: number;
+    lng: number;
+    priceLevel?: number;
+    openingHours?: string[];
+    address: string;
+  }>> {
+    const radius = options?.radius || 5000; // 5km default
+    const limit = options?.limit || 10;
+
+    // Map our types to Mapbox POI categories
+    const categoryMap = {
+      restaurant: ['restaurant', 'food_and_drink', 'cafe'],
+      attraction: ['tourist_attraction', 'museum', 'park', 'entertainment'],
+      accommodation: ['accommodation', 'hotel', 'lodging']
+    };
+
+    const categories = categoryMap[type];
+    
+    try {
+      // Use Mapbox Places API to search for POIs
+      const bbox = this.calculateBoundingBox(latitude, longitude, radius);
+      
+      const results = [];
+      
+      // Search for each category
+      for (const category of categories) {
+        try {
+          const searchResponse = await this.searchPlaces('', {
+            limit: Math.ceil(limit / categories.length),
+            bbox,
+            types: [category],
+            proximity: [longitude, latitude]
+          });
+
+          if (searchResponse.features) {
+            for (const feature of searchResponse.features) {
+              const [lng, lat] = feature.center;
+              const distance = this.calculateDistance(latitude, longitude, lat, lng);
+              
+              if (distance <= radius) {
+                results.push({
+                  id: feature.id,
+                  name: feature.text,
+                  type,
+                  rating: 4 + Math.random(), // Mock rating, you'd get this from a reviews API
+                  distance: distance < 1000 ? `${Math.round(distance)}m` : `${(distance / 1000).toFixed(1)}km`,
+                  duration: `${Math.round(distance / 83)}min`, // Walking speed ~5km/h = 83m/min
+                  description: feature.properties?.category || `${type} in ${feature.context?.[0]?.text || 'the area'}`,
+                  imageUrl: `https://via.placeholder.com/300x200?text=${encodeURIComponent(feature.text)}`, // Mock image
+                  tags: feature.place_type || [],
+                  lat,
+                  lng,
+                  priceLevel: Math.floor(Math.random() * 4) + 1, // Mock price level 1-4
+                  openingHours: ['9:00 AM - 10:00 PM'], // Mock hours
+                  address: feature.place_name
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.warn(`Failed to search for ${category}:`, error);
+        }
+      }
+
+      // Sort by distance and limit results
+      return results
+        .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
+        .slice(0, limit);
+
+    } catch (error) {
+      console.error('POI search error:', error);
+      // Return mock data as fallback
+      return this.generateMockPOI(latitude, longitude, type, limit);
+    }
+  }
+
+  // Helper function to calculate bounding box for a radius
+  private calculateBoundingBox(lat: number, lng: number, radiusMeters: number): [number, number, number, number] {
+    const radiusDegrees = radiusMeters / 111320; // Rough conversion: 1 degree ≈ 111.32 km
+    return [
+      lng - radiusDegrees, // minX
+      lat - radiusDegrees, // minY
+      lng + radiusDegrees, // maxX
+      lat + radiusDegrees  // maxY
+    ];
+  }
+
+  // Helper function to calculate distance between two points
+  private calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const R = 6371000; // Earth's radius in meters
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+
+  // Generate mock POI data as fallback
+  private generateMockPOI(lat: number, lng: number, type: 'restaurant' | 'attraction' | 'accommodation', limit: number) {
+    const mockData = {
+      restaurant: [
+        'Local Bistro', 'Pizza Corner', 'Sushi House', 'Coffee Shop', 'Street Food Market',
+        'Fine Dining', 'Burger Joint', 'Vegetarian Delight', 'Seafood Restaurant', 'BBQ Grill'
+      ],
+      attraction: [
+        'City Museum', 'Historic Monument', 'Art Gallery', 'Central Park', 'Observation Deck',
+        'Cultural Center', 'Zoo', 'Botanical Garden', 'Theater', 'Shopping District'
+      ],
+      accommodation: [
+        'Grand Hotel', 'Budget Inn', 'Boutique Lodge', 'Hostel', 'Resort',
+        'Business Hotel', 'Bed & Breakfast', 'Apartment Hotel', 'Luxury Suite', 'Motel'
+      ]
+    };
+
+    return Array.from({ length: Math.min(limit, 10) }, (_, i) => ({
+      id: `mock-${type}-${i}`,
+      name: mockData[type][i % mockData[type].length],
+      type,
+      rating: 3.5 + Math.random() * 1.5,
+      distance: `${(Math.random() * 2 + 0.1).toFixed(1)}km`,
+      duration: `${Math.round(Math.random() * 20 + 5)}min`,
+      description: `Popular ${type} in the area`,
+      imageUrl: `https://via.placeholder.com/300x200?text=${encodeURIComponent(mockData[type][i % mockData[type].length])}`,
+      tags: [type, 'popular', 'nearby'],
+      lat: lat + (Math.random() - 0.5) * 0.01,
+      lng: lng + (Math.random() - 0.5) * 0.01,
+      priceLevel: Math.floor(Math.random() * 4) + 1,
+      openingHours: ['9:00 AM - 10:00 PM'],
+      address: `${Math.floor(Math.random() * 999) + 1} Main Street`
+    }));
+  }
+
   // Calculate total trip distance and time from directions
   async calculateTripMetrics(
     coordinates: Array<[number, number]>,

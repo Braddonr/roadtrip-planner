@@ -16,6 +16,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   CalendarIcon,
   MapPin,
@@ -23,11 +25,16 @@ import {
   Route,
   CloudSun,
   Loader2,
+  Car,
+  Fuel,
+  DollarSign,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { mapboxService } from "@/services/mapbox";
+import { apiService } from "@/services/api";
 import { Trip, Stop, WeatherForecast } from "@/types/trip";
+import { cars, getCarById, formatCarName } from "@/data/cars";
 
 interface TripCreationModalProps {
   isOpen: boolean;
@@ -55,6 +62,17 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [isLoading, setIsLoading] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  
+  // Vehicle and fuel settings
+  const [selectedCar, setSelectedCar] = useState("toyota-camry-2024");
+  const [customMake, setCustomMake] = useState("");
+  const [customModel, setCustomModel] = useState("");
+  const [customYear, setCustomYear] = useState("");
+  const [fuelEfficiency, setFuelEfficiency] = useState("25");
+  const [fuelPrice, setFuelPrice] = useState("3.50");
+  const [isPublic, setIsPublic] = useState(false);
+  
   const [tripData, setTripData] = useState<{
     totalDistance: number;
     totalTime: number;
@@ -81,8 +99,10 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
 
       // Get directions and calculate total distance/time
       const directions = await mapboxService.getDirections(coordinates, {
-        profile: routeType === 'fastest' ? 'driving' : 'driving',
+        profile: routeType === 'fastest' ? 'driving-traffic' : 
+                 routeType === 'scenic' ? 'driving' : 'driving',
         steps: true,
+        alternatives: routeType === 'scenic',
       });
 
       let totalDistance = 0;
@@ -115,17 +135,38 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
       // Calculate estimated fuel cost (rough estimate: 10km per liter, $1.5 per liter)
       const estimatedFuelCost = (totalDistance / 1000) * 0.1 * 1.5;
 
-      // Get weather for each stop (simplified - you'd want to implement actual weather API)
+      // Get REAL weather for each stop using the enhanced mapbox service
       const weather: WeatherForecast[] = await Promise.all(
-        initialStops.map(async (stop, index) => ({
-          location: stop.name,
-          temperature: 25 + Math.random() * 10, // Mock data
-          condition: ['Sunny', 'Partly Cloudy', 'Cloudy'][Math.floor(Math.random() * 3)],
-          icon: 'sun',
-          humidity: 60 + Math.random() * 20,
-          windSpeed: 5 + Math.random() * 10,
-          date: new Date(),
-        }))
+        initialStops.map(async (stop) => {
+          try {
+            const weatherData = await mapboxService.getWeatherForLocation(
+              stop.lat,
+              stop.lng,
+              stop.name
+            );
+            return {
+              location: weatherData.location,
+              temperature: weatherData.temperature,
+              condition: weatherData.condition,
+              icon: weatherData.icon,
+              humidity: weatherData.humidity,
+              windSpeed: weatherData.windSpeed,
+              date: weatherData.date,
+            };
+          } catch (error) {
+            console.warn(`Failed to get weather for ${stop.name}:`, error);
+            // Fallback weather data
+            return {
+              location: stop.name,
+              temperature: 25,
+              condition: 'Unknown',
+              icon: 'sun',
+              humidity: 65,
+              windSpeed: 8,
+              date: new Date(),
+            };
+          }
+        })
       );
 
       setTripData({
@@ -142,28 +183,114 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
     }
   };
 
-  const handleCreateTrip = () => {
+  const handleCreateTrip = async () => {
     if (!tripName.trim() || !tripData) return;
 
-    const trip: Omit<Trip, 'id' | 'createdAt' | 'updatedAt'> = {
-      name: tripName.trim(),
-      stops: tripData.stops,
-      routeType,
-      totalDistance: tripData.totalDistance,
-      totalTime: tripData.totalTime,
-      estimatedFuelCost: tripData.estimatedFuelCost,
-      startDate,
-      endDate,
-    };
+    setIsCreating(true);
+    try {
+      // Get vehicle information
+      let vehicleInfo = {};
+      if (selectedCar === "custom") {
+        vehicleInfo = {
+          vehicle_make: customMake || "Custom",
+          vehicle_model: customModel || "Vehicle",
+          vehicle_year: customYear || "N/A",
+        };
+      } else {
+        const selectedCarData = getCarById(selectedCar);
+        if (selectedCarData) {
+          vehicleInfo = {
+            vehicle_make: selectedCarData.make,
+            vehicle_model: selectedCarData.model,
+            vehicle_year: selectedCarData.year.toString(),
+          };
+        }
+      }
 
-    onCreateTrip(trip);
-    onClose();
-    
-    // Reset form
+      // Prepare trip data for backend
+      const backendTripData = {
+        name: tripName.trim(),
+        description: description.trim() || undefined,
+        route_type: routeType,
+        start_date: startDate ? startDate.toISOString().split("T")[0] : undefined,
+        end_date: endDate ? endDate.toISOString().split("T")[0] : undefined,
+        fuel_efficiency: parseFloat(fuelEfficiency),
+        fuel_price_per_gallon: parseFloat(fuelPrice),
+        is_public: isPublic,
+        ...vehicleInfo,
+      };
+
+      console.log('Creating trip with data:', backendTripData);
+
+      // Create trip via API
+      const createdTrip = await apiService.createTrip(backendTripData);
+      console.log('Trip created successfully:', createdTrip);
+
+      // Add stops to the created trip
+      if (createdTrip.id && initialStops.length > 0) {
+        console.log('Adding stops to trip:', initialStops);
+        
+        for (let i = 0; i < initialStops.length; i++) {
+          const stop = initialStops[i];
+          const stopData = {
+            name: stop.name,
+            address: `${stop.lat.toFixed(4)}, ${stop.lng.toFixed(4)}`,
+            latitude: stop.lat,
+            longitude: stop.lng,
+            order: i + 1,
+            stop_type: stop.type === 'start' ? 'start' : 
+                      stop.type === 'destination' ? 'destination' : 'waypoint',
+          };
+
+          try {
+            await apiService.addStopToTrip(createdTrip.id, stopData);
+            console.log(`Stop ${i + 1} added successfully:`, stopData);
+          } catch (error) {
+            console.error(`Failed to add stop ${i + 1}:`, error);
+          }
+        }
+      }
+
+      // Create local trip object for immediate UI update
+      const localTrip: Omit<Trip, 'id' | 'createdAt' | 'updatedAt'> = {
+        name: tripName.trim(),
+        stops: tripData.stops,
+        routeType,
+        totalDistance: tripData.totalDistance,
+        totalTime: tripData.totalTime,
+        estimatedFuelCost: tripData.estimatedFuelCost,
+        startDate,
+        endDate,
+      };
+
+      // Call parent callback for immediate UI update
+      onCreateTrip(localTrip);
+      
+      // Close modal and reset form
+      onClose();
+      resetForm();
+
+    } catch (error) {
+      console.error('Failed to create trip:', error);
+      // You might want to show an error message to the user here
+      alert('Failed to create trip. Please try again.');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const resetForm = () => {
     setTripName("");
     setDescription("");
     setStartDate(undefined);
     setEndDate(undefined);
+    setSelectedCar("toyota-camry-2024");
+    setCustomMake("");
+    setCustomModel("");
+    setCustomYear("");
+    setFuelEfficiency("25");
+    setFuelPrice("3.50");
+    setIsPublic(false);
     setTripData(null);
   };
 
@@ -275,6 +402,117 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
                 </Popover>
               </div>
             </div>
+
+            <Separator />
+
+            {/* Vehicle Selection */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Car className="h-4 w-4" />
+                <Label className="text-base font-semibold">Vehicle Details</Label>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Select Vehicle</Label>
+                <Select value={selectedCar} onValueChange={setSelectedCar}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a vehicle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cars.map((car) => (
+                      <SelectItem key={car.id} value={car.id}>
+                        {formatCarName(car)}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="custom">Custom Vehicle</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedCar === "custom" && (
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Make</Label>
+                    <Input
+                      placeholder="Toyota"
+                      value={customMake}
+                      onChange={(e) => setCustomMake(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Model</Label>
+                    <Input
+                      placeholder="Camry"
+                      value={customModel}
+                      onChange={(e) => setCustomModel(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Year</Label>
+                    <Input
+                      placeholder="2024"
+                      value={customYear}
+                      onChange={(e) => setCustomYear(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Fuel Settings */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Fuel className="h-4 w-4" />
+                <Label className="text-base font-semibold">Fuel Settings</Label>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Fuel Efficiency (MPG)</Label>
+                  <Input
+                    type="number"
+                    placeholder="25"
+                    value={fuelEfficiency}
+                    onChange={(e) => setFuelEfficiency(e.target.value)}
+                    min="5"
+                    max="100"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Fuel Price ($/gallon)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="3.50"
+                    value={fuelPrice}
+                    onChange={(e) => setFuelPrice(e.target.value)}
+                    min="1"
+                    max="10"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Privacy Settings */}
+            <div className="space-y-2">
+              <Label className="text-base font-semibold">Privacy</Label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="isPublic"
+                  checked={isPublic}
+                  onChange={(e) => setIsPublic(e.target.checked)}
+                  className="rounded"
+                />
+                <Label htmlFor="isPublic" className="text-sm">
+                  Make this trip public (others can view and copy)
+                </Label>
+              </div>
+            </div>
           </div>
 
           {/* Trip Summary */}
@@ -363,12 +601,12 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
           </Button>
           <Button 
             onClick={handleCreateTrip}
-            disabled={!tripName.trim() || !tripData || isLoading}
+            disabled={!tripName.trim() || !tripData || isLoading || isCreating}
           >
-            {isLoading ? (
+            {isCreating ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Creating...
+                Creating Trip...
               </>
             ) : (
               'Create Trip'
