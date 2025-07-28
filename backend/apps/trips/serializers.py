@@ -81,25 +81,48 @@ class TripDetailSerializer(serializers.ModelSerializer):
             'total_distance', 'total_time', 'estimated_fuel_cost',
             'start_date', 'end_date', 'duration_days', 'stops', 'stops_count',
             'is_public', 'fuel_efficiency', 'fuel_price_per_gallon',
+            'vehicle_make', 'vehicle_model', 'vehicle_year',
+            'route_geometry', 'route_bounds',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'user', 'total_distance', 'total_time', 'estimated_fuel_cost', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'user', 'created_at', 'updated_at']
 
 
 class TripCreateSerializer(serializers.ModelSerializer):
-    """Serializer for creating trips."""
+    """Serializer for creating trips with nested stops."""
+    
+    stops = StopCreateSerializer(many=True, required=False)
     
     class Meta:
         model = Trip
         fields = [
             'name', 'description', 'route_type', 'start_date', 'end_date',
-            'is_public', 'fuel_efficiency', 'fuel_price_per_gallon'
+            'is_public', 'fuel_efficiency', 'fuel_price_per_gallon',
+            'vehicle_make', 'vehicle_model', 'vehicle_year',
+            'route_geometry', 'route_bounds', 'total_distance', 
+            'total_time', 'estimated_fuel_cost', 'stops'
         ]
     
     def create(self, validated_data):
-        """Create trip with current user as owner."""
+        """Create trip with current user as owner and nested stops."""
+        from django.db import transaction
+        
+        stops_data = validated_data.pop('stops', [])
         validated_data['user'] = self.context['request'].user
-        return super().create(validated_data)
+        
+        with transaction.atomic():
+            # Create the trip
+            trip = Trip.objects.create(**validated_data)
+            
+            # Create all stops
+            for stop_data in stops_data:
+                Stop.objects.create(trip=trip, **stop_data)
+            
+            # Recalculate statistics if not provided
+            if not validated_data.get('total_distance'):
+                trip.calculate_statistics()
+            
+            return trip
 
 
 class TripUpdateSerializer(serializers.ModelSerializer):
@@ -109,7 +132,9 @@ class TripUpdateSerializer(serializers.ModelSerializer):
         model = Trip
         fields = [
             'name', 'description', 'route_type', 'start_date', 'end_date',
-            'is_public', 'fuel_efficiency', 'fuel_price_per_gallon'
+            'is_public', 'fuel_efficiency', 'fuel_price_per_gallon',
+            'vehicle_make', 'vehicle_model', 'vehicle_year',
+            'route_geometry', 'route_bounds'
         ]
 
 
