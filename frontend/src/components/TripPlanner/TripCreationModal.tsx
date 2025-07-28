@@ -207,7 +207,48 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
         }
       }
 
-      // Prepare trip data for backend
+      // Prepare stops data
+      const stopsData = initialStops.map((stop, index) => ({
+        name: stop.name,
+        address: `${stop.lat.toFixed(4)}, ${stop.lng.toFixed(4)}`,
+        latitude: stop.lat,
+        longitude: stop.lng,
+        order: index + 1,
+        stop_type: stop.type === 'start' ? 'start' : 
+                  stop.type === 'destination' ? 'destination' : 'waypoint',
+      }));
+
+      // Get route geometry for map visualization
+      let routeGeometry = null;
+      let routeBounds = null;
+      
+      if (tripData && tripData.stops.length >= 2) {
+        try {
+          const coordinates = initialStops.map(stop => [stop.lng, stop.lat]);
+          const directions = await mapboxService.getDirections(coordinates, {
+            profile: routeType === 'fastest' ? 'driving-traffic' : 
+                     routeType === 'scenic' ? 'driving' : 'driving',
+            geometries: 'polyline',
+            overview: 'full',
+          });
+
+          if (directions.routes && directions.routes.length > 0) {
+            routeGeometry = directions.routes[0].geometry;
+            
+            // Calculate bounds for map fitting
+            const lats = initialStops.map(stop => stop.lat);
+            const lngs = initialStops.map(stop => stop.lng);
+            routeBounds = {
+              northeast: { lat: Math.max(...lats), lng: Math.max(...lngs) },
+              southwest: { lat: Math.min(...lats), lng: Math.min(...lngs) }
+            };
+          }
+        } catch (error) {
+          console.warn('Failed to get route geometry:', error);
+        }
+      }
+
+      // Prepare complete trip data for backend (including stops)
       const backendTripData = {
         name: tripName.trim(),
         description: description.trim() || undefined,
@@ -217,39 +258,23 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
         fuel_efficiency: parseFloat(fuelEfficiency),
         fuel_price_per_gallon: parseFloat(fuelPrice),
         is_public: isPublic,
+        // Include stops in the trip creation
+        stops: stopsData,
+        // Include route data for map visualization
+        route_geometry: routeGeometry,
+        route_bounds: routeBounds,
+        // Include calculated metrics
+        total_distance: tripData?.totalDistance || 0,
+        total_time: tripData?.totalTime || 0,
+        estimated_fuel_cost: tripData?.estimatedFuelCost || 0,
         ...vehicleInfo,
       };
 
-      console.log('Creating trip with data:', backendTripData);
+      console.log('Creating trip with complete data:', backendTripData);
 
-      // Create trip via API
+      // Create trip with all stops in one API call
       const createdTrip = await apiService.createTrip(backendTripData);
-      console.log('Trip created successfully:', createdTrip);
-
-      // Add stops to the created trip
-      if (createdTrip.id && initialStops.length > 0) {
-        console.log('Adding stops to trip:', initialStops);
-        
-        for (let i = 0; i < initialStops.length; i++) {
-          const stop = initialStops[i];
-          const stopData = {
-            name: stop.name,
-            address: `${stop.lat.toFixed(4)}, ${stop.lng.toFixed(4)}`,
-            latitude: stop.lat,
-            longitude: stop.lng,
-            order: i + 1,
-            stop_type: stop.type === 'start' ? 'start' : 
-                      stop.type === 'destination' ? 'destination' : 'waypoint',
-          };
-
-          try {
-            await apiService.addStopToTrip(createdTrip.id, stopData);
-            console.log(`Stop ${i + 1} added successfully:`, stopData);
-          } catch (error) {
-            console.error(`Failed to add stop ${i + 1}:`, error);
-          }
-        }
-      }
+      console.log('Trip created successfully with all stops:', createdTrip);
 
       // Create local trip object for immediate UI update
       const localTrip: Omit<Trip, 'id' | 'createdAt' | 'updatedAt'> = {

@@ -188,6 +188,24 @@ class ApiService {
     vehicle_make?: string;
     vehicle_model?: string;
     vehicle_year?: string;
+    is_public?: boolean;
+    // New fields for enhanced trip creation
+    stops?: Array<{
+      name: string;
+      address: string;
+      latitude: number;
+      longitude: number;
+      order: number;
+      stop_type: string;
+    }>;
+    route_geometry?: string;
+    route_bounds?: {
+      northeast: { lat: number; lng: number };
+      southwest: { lat: number; lng: number };
+    };
+    total_distance?: number;
+    total_time?: number;
+    estimated_fuel_cost?: number;
   }) {
     try {
       return await makeAuthenticatedRequest(`${this.baseUrl}/trips/`, {

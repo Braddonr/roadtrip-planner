@@ -1465,3 +1465,72 @@ WARNING 2025-07-28 13:11:28,658 log 13474 6146781184 Bad Request: /api/trips/14/
 WARNING 2025-07-28 13:11:28,658 basehttp 13474 6146781184 "POST /api/trips/14/stops/ HTTP/1.1" 400 37
 INFO 2025-07-28 13:12:53,547 basehttp 13474 6146781184 "POST /api/trips/ HTTP/1.1" 201 208
 INFO 2025-07-28 13:13:19,935 basehttp 13474 6146781184 "GET /api/trips/ HTTP/1.1" 200 786
+INFO 2025-07-28 13:15:41,381 basehttp 13474 6163607552 "OPTIONS /api/auth/me/ HTTP/1.1" 200 0
+INFO 2025-07-28 13:15:41,381 basehttp 13474 6180433920 "OPTIONS /api/auth/me/ HTTP/1.1" 200 0
+INFO 2025-07-28 13:15:41,389 basehttp 13474 6163607552 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-28 13:15:41,393 basehttp 13474 6180433920 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-28 13:15:41,511 basehttp 13474 6180433920 "GET /api/trips/ HTTP/1.1" 200 786
+INFO 2025-07-28 13:15:41,520 basehttp 13474 6163607552 "GET /api/trips/ HTTP/1.1" 200 786
+ERROR 2025-07-28 13:15:41,614 google_places 13474 6163607552 Google Places API key not configured
+ERROR 2025-07-28 13:15:41,614 google_places 13474 6163607552 Google Places API key not configured
+ERROR 2025-07-28 13:15:41,614 google_places 13474 6163607552 Google Places API key not configured
+INFO 2025-07-28 13:15:41,615 basehttp 13474 6163607552 "GET /api/recommendations/?lat=-1.2921&lng=36.8219 HTTP/1.1" 200 55
+ERROR 2025-07-28 13:15:44,983 google_places 13474 6163607552 Google Places API key not configured
+ERROR 2025-07-28 13:15:44,983 google_places 13474 6163607552 Google Places API key not configured
+ERROR 2025-07-28 13:15:44,983 google_places 13474 6163607552 Google Places API key not configured
+INFO 2025-07-28 13:15:44,983 basehttp 13474 6163607552 "GET /api/recommendations/?lat=-1.2921&lng=36.8219 HTTP/1.1" 200 55
+ERROR 2025-07-28 13:15:56,180 google_places 13474 6163607552 Google Places API key not configured
+ERROR 2025-07-28 13:15:56,180 google_places 13474 6163607552 Google Places API key not configured
+ERROR 2025-07-28 13:15:56,180 google_places 13474 6163607552 Google Places API key not configured
+INFO 2025-07-28 13:15:56,181 basehttp 13474 6163607552 "GET /api/recommendations/?lat=-1.2921&lng=36.8219 HTTP/1.1" 200 55
+INFO 2025-07-28 13:16:06,020 basehttp 13474 6163607552 "POST /api/auth/login/ HTTP/1.1" 200 858
+INFO 2025-07-28 13:16:06,086 basehttp 13474 6163607552 "GET /api/trips/ HTTP/1.1" 200 786
+INFO 2025-07-28 13:16:06,092 basehttp 13474 6163607552 "GET /api/trips/ HTTP/1.1" 200 786
+ERROR 2025-07-28 13:16:06,158 google_places 13474 6163607552 Google Places API key not configured
+ERROR 2025-07-28 13:16:06,158 google_places 13474 6163607552 Google Places API key not configured
+ERROR 2025-07-28 13:16:06,158 google_places 13474 6163607552 Google Places API key not configured
+INFO 2025-07-28 13:16:06,159 basehttp 13474 6163607552 "GET /api/recommendations/?lat=-1.2921&lng=36.8219 HTTP/1.1" 200 55
+INFO 2025-07-28 13:16:15,641 basehttp 13474 6163607552 "GET /api/trips/ HTTP/1.1" 200 786
+INFO 2025-07-28 13:16:15,656 basehttp 13474 6163607552 "GET /api/trips/ HTTP/1.1" 200 786
+ERROR 2025-07-28 13:16:15,716 google_places 13474 6163607552 Google Places API key not configured
+ERROR 2025-07-28 13:16:15,716 google_places 13474 6163607552 Google Places API key not configured
+ERROR 2025-07-28 13:16:15,716 google_places 13474 6163607552 Google Places API key not configured
+INFO 2025-07-28 13:16:15,716 basehttp 13474 6163607552 "GET /api/recommendations/?lat=-1.2921&lng=36.8219 HTTP/1.1" 200 55
+INFO 2025-07-28 13:16:56,194 basehttp 13474 6180433920 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-28 13:16:56,199 basehttp 13474 6163607552 "GET /api/trips/ HTTP/1.1" 200 786
+INFO 2025-07-28 13:16:56,204 basehttp 13474 6180433920 "GET /api/trips/ HTTP/1.1" 200 786
+ERROR 2025-07-28 13:16:56,279 google_places 13474 6180433920 Google Places API key not configured
+ERROR 2025-07-28 13:16:56,279 google_places 13474 6180433920 Google Places API key not configured
+ERROR 2025-07-28 13:16:56,279 google_places 13474 6180433920 Google Places API key not configured
+INFO 2025-07-28 13:16:56,279 basehttp 13474 6180433920 "GET /api/recommendations/?lat=-1.2921&lng=36.8219 HTTP/1.1" 200 55
+INFO 2025-07-28 13:17:12,792 basehttp 13474 6163607552 "OPTIONS /api/trips/15/stops/ HTTP/1.1" 200 0
+WARNING 2025-07-28 13:17:12,796 log 13474 6163607552 Bad Request: /api/trips/15/stops/
+WARNING 2025-07-28 13:17:12,796 basehttp 13474 6163607552 "POST /api/trips/15/stops/ HTTP/1.1" 400 37
+WARNING 2025-07-28 13:17:15,151 log 13474 6163607552 Bad Request: /api/trips/15/stops/
+WARNING 2025-07-28 13:17:15,157 basehttp 13474 6163607552 "POST /api/trips/15/stops/ HTTP/1.1" 400 37
+WARNING 2025-07-28 13:17:17,591 log 13474 6163607552 Bad Request: /api/trips/15/stops/
+WARNING 2025-07-28 13:17:17,591 basehttp 13474 6163607552 "POST /api/trips/15/stops/ HTTP/1.1" 400 37
+WARNING 2025-07-28 13:17:23,214 log 13474 6163607552 Bad Request: /api/trips/15/stops/
+WARNING 2025-07-28 13:17:23,214 basehttp 13474 6163607552 "POST /api/trips/15/stops/ HTTP/1.1" 400 37
+WARNING 2025-07-28 13:17:25,461 log 13474 6163607552 Bad Request: /api/trips/15/stops/
+WARNING 2025-07-28 13:17:25,461 basehttp 13474 6163607552 "POST /api/trips/15/stops/ HTTP/1.1" 400 37
+WARNING 2025-07-28 13:17:27,650 log 13474 6163607552 Bad Request: /api/trips/15/stops/
+WARNING 2025-07-28 13:17:27,653 basehttp 13474 6163607552 "POST /api/trips/15/stops/ HTTP/1.1" 400 37
+INFO 2025-07-28 13:18:14,935 basehttp 13474 6163607552 "POST /api/trips/ HTTP/1.1" 201 216
+ERROR 2025-07-28 13:18:25,930 google_places 13474 6163607552 Google Places API key not configured
+ERROR 2025-07-28 13:18:25,930 google_places 13474 6163607552 Google Places API key not configured
+ERROR 2025-07-28 13:18:25,931 google_places 13474 6163607552 Google Places API key not configured
+INFO 2025-07-28 13:18:25,931 basehttp 13474 6163607552 "GET /api/recommendations/?lat=-1.2921&lng=36.8219 HTTP/1.1" 200 55
+ERROR 2025-07-28 13:18:26,947 google_places 13474 6163607552 Google Places API key not configured
+ERROR 2025-07-28 13:18:26,947 google_places 13474 6163607552 Google Places API key not configured
+ERROR 2025-07-28 13:18:26,947 google_places 13474 6163607552 Google Places API key not configured
+INFO 2025-07-28 13:18:26,947 basehttp 13474 6163607552 "GET /api/recommendations/?lat=-1.2921&lng=36.8219 HTTP/1.1" 200 55
+INFO 2025-07-28 13:18:29,194 basehttp 13474 6163607552 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-28 13:18:29,196 basehttp 13474 6163607552 "GET /api/auth/me/ HTTP/1.1" 200 356
+INFO 2025-07-28 13:18:29,305 basehttp 13474 6163607552 "GET /api/trips/ HTTP/1.1" 200 1167
+INFO 2025-07-28 13:18:29,312 basehttp 13474 6180433920 "GET /api/trips/ HTTP/1.1" 200 1167
+ERROR 2025-07-28 13:18:29,395 google_places 13474 6180433920 Google Places API key not configured
+ERROR 2025-07-28 13:18:29,395 google_places 13474 6180433920 Google Places API key not configured
+ERROR 2025-07-28 13:18:29,395 google_places 13474 6180433920 Google Places API key not configured
+INFO 2025-07-28 13:18:29,395 basehttp 13474 6180433920 "GET /api/recommendations/?lat=-1.2921&lng=36.8219 HTTP/1.1" 200 55
+INFO 2025-07-28 13:22:03,696 autoreload 13474 8412700416 /Users/braddr/Documents/Code/Personal Projects/roadTrip_planner/backend/apps/trips/models.py changed, reloading.
