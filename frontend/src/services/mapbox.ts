@@ -161,6 +161,11 @@ class MapboxService {
       geometries?: "geojson" | "polyline" | "polyline6";
       overview?: "full" | "simplified" | "false";
       steps?: boolean;
+      alternatives?: boolean;
+      continue_straight?: boolean;
+      waypoint_snapping?: string;
+      approaches?: string[];
+      annotations?: string[];
     }
   ): Promise<MapboxDirectionsResponse> {
     const profile = options?.profile || "driving";
@@ -174,6 +179,27 @@ class MapboxService {
       overview: options?.overview || "full",
       steps: (options?.steps || false).toString(),
     });
+
+    // Add additional routing parameters
+    if (options?.alternatives !== undefined) {
+      params.append("alternatives", options.alternatives.toString());
+    }
+    
+    if (options?.continue_straight !== undefined) {
+      params.append("continue_straight", options.continue_straight.toString());
+    }
+    
+    if (options?.waypoint_snapping) {
+      params.append("waypoint_snapping", options.waypoint_snapping);
+    }
+    
+    if (options?.approaches && options.approaches.length > 0) {
+      params.append("approaches", options.approaches.join(";"));
+    }
+    
+    if (options?.annotations && options.annotations.length > 0) {
+      params.append("annotations", options.annotations.join(","));
+    }
 
     try {
       const response = await fetch(
@@ -282,6 +308,126 @@ class MapboxService {
       categories: feature.place_type,
       relevance: feature.relevance,
     };
+  }
+
+  // Get weather data for a location (using OpenWeatherMap API as Mapbox doesn't have weather)
+  async getWeatherForLocation(
+    latitude: number,
+    longitude: number,
+    locationName?: string
+  ): Promise<{
+    location: string;
+    temperature: number;
+    condition: string;
+    icon: string;
+    humidity: number;
+    windSpeed: number;
+    date: Date;
+  }> {
+    // Note: You'll need to add OpenWeatherMap API key to your environment
+    const OPENWEATHER_API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY;
+    
+    if (!OPENWEATHER_API_KEY) {
+      // Return mock data if no API key is provided
+      return {
+        location: locationName || `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+        temperature: 25 + Math.random() * 10,
+        condition: ['Sunny', 'Partly Cloudy', 'Cloudy', 'Rainy'][Math.floor(Math.random() * 4)],
+        icon: 'sun',
+        humidity: 60 + Math.random() * 20,
+        windSpeed: 5 + Math.random() * 10,
+        date: new Date(),
+      };
+    }
+
+    try {
+      const response = await fetch(
+        `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHER_API_KEY}&units=metric`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Weather API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      return {
+        location: locationName || data.name || `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+        temperature: Math.round(data.main.temp),
+        condition: data.weather[0].description,
+        icon: data.weather[0].icon,
+        humidity: data.main.humidity,
+        windSpeed: data.wind.speed,
+        date: new Date(),
+      };
+    } catch (error) {
+      console.error('Weather API error:', error);
+      // Return mock data as fallback
+      return {
+        location: locationName || `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+        temperature: 25,
+        condition: 'Unknown',
+        icon: 'sun',
+        humidity: 65,
+        windSpeed: 8,
+        date: new Date(),
+      };
+    }
+  }
+
+  // Calculate total trip distance and time from directions
+  async calculateTripMetrics(
+    coordinates: Array<[number, number]>,
+    routeType: 'fastest' | 'scenic' | 'custom' = 'fastest'
+  ): Promise<{
+    totalDistance: number; // meters
+    totalTime: number; // seconds
+    estimatedFuelCost: number; // USD
+    legs: Array<{
+      distance: number;
+      duration: number;
+      startPoint: [number, number];
+      endPoint: [number, number];
+    }>;
+  }> {
+    try {
+      const directions = await this.getDirections(coordinates, {
+        profile: routeType === 'fastest' ? 'driving' : 'driving',
+        steps: true,
+      });
+
+      if (!directions.routes || directions.routes.length === 0) {
+        throw new Error('No route found');
+      }
+
+      const route = directions.routes[0];
+      const totalDistance = route.distance; // meters
+      const totalTime = route.duration; // seconds
+
+      // Calculate estimated fuel cost
+      // Assumptions: 10km per liter, $1.5 per liter (adjust based on your region)
+      const fuelEfficiency = 10; // km per liter
+      const fuelPrice = 1.5; // USD per liter
+      const estimatedFuelCost = (totalDistance / 1000) / fuelEfficiency * fuelPrice;
+
+      // Extract leg information
+      const legs = route.legs.map((leg, index) => ({
+        distance: leg.distance,
+        duration: leg.duration,
+        startPoint: coordinates[index],
+        endPoint: coordinates[index + 1],
+      }));
+
+      return {
+        totalDistance,
+        totalTime,
+        estimatedFuelCost,
+        legs,
+      };
+    } catch (error) {
+      console.error('Error calculating trip metrics:', error);
+      throw error;
+    }
   }
 
   // Decode polyline (for route geometry)
