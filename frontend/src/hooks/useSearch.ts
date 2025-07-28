@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { SearchResult } from "../types/trip";
 import { apiService } from "../services/api";
-import { geoapifyService } from "../services/geoapify";
+import { mapboxService } from "../services/mapbox";
 
 export const useSearch = () => {
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -18,15 +18,16 @@ export const useSearch = () => {
     setError(null);
 
     try {
-      // Try Geoapify API first
-      const geoapifyResponse = await geoapifyService.searchPlaces(query, {
+      // Try Mapbox API first
+      const mapboxResponse = await mapboxService.searchPlaces(query, {
         limit: 10,
-        filter: { country: 'us' }, // You can remove this or make it configurable
+        country: 'ke', // Default to Kenya for more accurate local results
+        types: ['poi', 'address', 'place'], // Include points of interest, addresses, and places
       });
       
-      // Convert Geoapify results to our SearchResult format
-      const searchResults: SearchResult[] = geoapifyResponse.features.map(feature => {
-        const converted = geoapifyService.convertToSearchResult(feature);
+      // Convert Mapbox results to our SearchResult format
+      const searchResults: SearchResult[] = mapboxResponse.features.map(feature => {
+        const converted = mapboxService.convertToSearchResult(feature);
         return {
           id: converted.id,
           name: converted.name,
@@ -35,12 +36,13 @@ export const useSearch = () => {
           lng: converted.lng,
           type: converted.type,
           categories: converted.categories,
+          relevance: converted.relevance,
         };
       });
 
       setResults(searchResults);
-    } catch (geoapifyError) {
-      console.warn('Geoapify search failed, falling back to backend API:', geoapifyError);
+    } catch (mapboxError) {
+      console.warn('Mapbox search failed, falling back to backend API:', mapboxError);
       
       // Fallback to backend API if Geoapify fails
       try {

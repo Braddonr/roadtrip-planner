@@ -60,4 +60,5 @@ export interface SearchResult {
   type: string;
   rating?: number;
   categories?: string[];
+  relevance?: number;
 }

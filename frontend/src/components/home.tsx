@@ -27,6 +27,7 @@ export default function Home() {
   const search = useSearch();
   const { user, logout } = useAuth();
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
+  const [focusedLocation, setFocusedLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
 
   const handleLogout = async () => {
     await logout();
@@ -61,10 +62,10 @@ export default function Home() {
           tripStore.loadRecommendations(lastStop.lat, lastStop.lng);
         }
       } else {
-        // If no stops, try to load recommendations for a default location (e.g., trip's general area)
-        console.log('Home: No stops in current trip, loading general recommendations');
-        // Load recommendations for a default location (e.g., center of USA)
-        tripStore.loadRecommendations(39.8283, -98.5795);
+        // If no stops, try to load recommendations for a default location (Kenya)
+        console.log('Home: No stops in current trip, loading general recommendations for Kenya');
+        // Load recommendations for Nairobi, Kenya as default location
+        tripStore.loadRecommendations(-1.2921, 36.8219);
       }
     }
   }, [tripStore.currentTrip?.id, tripStore.currentTrip?.stops?.length]);
@@ -197,9 +198,17 @@ export default function Home() {
             }
             selectedRouteType={tripStore.currentTrip?.routeType || "fastest"}
             searchResults={search.results}
+            focusedLocation={focusedLocation}
             onRouteTypeChange={tripStore.updateRouteType}
             onSearchResultClick={(result) => {
-              // Add search result as a stop to the current trip
+              // Focus on the clicked search result first
+              setFocusedLocation({
+                lat: result.lat,
+                lng: result.lng,
+                name: result.name
+              });
+              
+              // Then add it as a stop to the current trip
               if (tripStore.currentTrip) {
                 tripStore.addStop({
                   name: result.name,
@@ -208,6 +217,10 @@ export default function Home() {
                   lng: result.lng,
                 });
               }
+            }}
+            onClearFocus={() => {
+              console.log('Clearing focused location');
+              setFocusedLocation(null);
             }}
           />
 
