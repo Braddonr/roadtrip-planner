@@ -222,6 +222,22 @@ export default function Home() {
               console.log('Clearing focused location');
               setFocusedLocation(null);
             }}
+            onAddMarker={(marker) => {
+              console.log('Adding marker to trip:', marker);
+              // Add the clicked marker as a stop to the current trip
+              if (tripStore.currentTrip) {
+                tripStore.addStop({
+                  name: marker.name,
+                  address: `${marker.lat.toFixed(4)}, ${marker.lng.toFixed(4)}`,
+                  lat: marker.lat,
+                  lng: marker.lng,
+                });
+              } else {
+                // If no current trip, show a message or create a new trip
+                console.log('No current trip selected. Please select or create a trip first.');
+                alert('Please select or create a trip first before adding markers.');
+              }
+            }}
           />
 
           {/* Map Controls */}

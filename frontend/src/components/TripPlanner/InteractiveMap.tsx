@@ -43,6 +43,7 @@ interface InteractiveMapProps {
   onRouteTypeChange?: (routeType: string) => void;
   onSearchResultClick?: (result: SearchResult) => void;
   onClearFocus?: () => void;
+  onAddMarker?: (marker: { lat: number; lng: number; name: string; type: 'start' | 'stop' | 'destination' }) => void;
 }
 
 const InteractiveMap: React.FC<InteractiveMapProps> = ({
@@ -57,12 +58,20 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
   onRouteTypeChange = () => {},
   onSearchResultClick = () => {},
   onClearFocus = () => {},
+  onAddMarker = () => {},
 }) => {
   const [zoom, setZoom] = useState(5);
   const [mapType, setMapType] = useState("streets-v11");
   const [mapCenter, setMapCenter] = useState({ lat: -1.2921, lng: 36.8219 }); // Center of Kenya (Nairobi)
   const [isMapLoading, setIsMapLoading] = useState(true);
   const [routePath, setRoutePath] = useState<Array<[number, number]>>([]);
+  const [clickedMarkers, setClickedMarkers] = useState<Array<{
+    id: string;
+    lat: number;
+    lng: number;
+    name?: string;
+    type: 'start' | 'stop' | 'destination';
+  }>>([]);
   const mapRef = useRef<HTMLDivElement>(null);
 
   const routeTypes: RouteType[] = [
@@ -266,15 +275,82 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
     setMapType(newType);
   };
 
+  // Handle map click to add markers
+  const handleMapClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    const rect = mapRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    // Calculate click position relative to map
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    // Convert pixel coordinates to lat/lng (approximate calculation)
+    const mapWidth = rect.width;
+    const mapHeight = rect.height;
+    
+    // Calculate the bounds of the current map view
+    const degreesPerPixelX = (360 / Math.pow(2, zoom)) / mapWidth;
+    const degreesPerPixelY = (170.1022 / Math.pow(2, zoom)) / mapHeight; // 170.1022 is the total lat range (-85.0511 to 85.0511)
+    
+    // Calculate clicked coordinates
+    const clickedLng = mapCenter.lng + (x - mapWidth / 2) * degreesPerPixelX;
+    const clickedLat = mapCenter.lat - (y - mapHeight / 2) * degreesPerPixelY;
+
+    // Determine marker type based on existing markers
+    let markerType: 'start' | 'stop' | 'destination' = 'stop';
+    if (clickedMarkers.length === 0) {
+      markerType = 'start';
+    } else {
+      markerType = 'stop';
+    }
+
+    // Create new marker
+    const newMarker = {
+      id: `marker-${Date.now()}`,
+      lat: clickedLat,
+      lng: clickedLng,
+      name: markerType === 'start' ? 'Starting Point' : 
+            `Stop ${clickedMarkers.filter(m => m.type === 'stop').length + 1}`,
+      type: markerType
+    };
+
+    // Add marker to state
+    setClickedMarkers(prev => [...prev, newMarker]);
+
+    // Call parent callback
+    onAddMarker(newMarker);
+
+    console.log('Map clicked at:', { lat: clickedLat, lng: clickedLng, type: markerType });
+  };
+
+  // Clear all clicked markers
+  const clearClickedMarkers = () => {
+    setClickedMarkers([]);
+  };
+
+  // Convert clicked markers to waypoints for trip
+  const convertMarkersToWaypoints = () => {
+    return clickedMarkers.map(marker => ({
+      id: marker.id,
+      name: marker.name || `${marker.type} point`,
+      lat: marker.lat,
+      lng: marker.lng
+    }));
+  };
+
   return (
-    <Card className="w-full h-full bg-background border rounded-lg overflow-hidden">
+    <div className="w-full h-full bg-background border rounded-lg overflow-hidden">
       <div className="relative w-full h-[600px] bg-slate-100">
-        {/* Mapbox Static Map */}
-        <div className="absolute inset-0">
+        {/* Interactive Mapbox Map */}
+        <div 
+          ref={mapRef}
+          className="absolute inset-0 cursor-crosshair"
+          onClick={handleMapClick}
+        >
           <img
             src={getMapUrl()}
             alt="Interactive Map"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover pointer-events-none"
             onLoad={() => {
               console.log("Map image loaded successfully");
               setIsMapLoading(false);
@@ -290,6 +366,32 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
               if (fallback) fallback.style.display = "flex";
             }}
           />
+
+          {/* Clicked markers overlay */}
+          {clickedMarkers.map((marker, index) => (
+            <div
+              key={marker.id}
+              className="absolute transform -translate-x-1/2 -translate-y-full pointer-events-none z-10"
+              style={{
+                left: `${((marker.lng - (mapCenter.lng - (180 / Math.pow(2, zoom)))) / (360 / Math.pow(2, zoom))) * 100}%`,
+                top: `${((mapCenter.lat + (85.0511 / Math.pow(2, zoom)) - marker.lat) / (170.1022 / Math.pow(2, zoom))) * 100}%`
+              }}
+            >
+              <div className="relative">
+                <div className={`rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold shadow-lg border-2 border-white ${
+                  marker.type === 'start' ? 'bg-green-500 text-white' :
+                  'bg-blue-500 text-white'
+                }`}>
+                  {marker.type === 'start' ? 'S' : 
+                   index + 1}
+                </div>
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 bg-black/80 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                  {marker.name}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
 
           {/* Loading overlay */}
           {isMapLoading && (
@@ -405,8 +507,75 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
           </div>
         )}
 
+        {/* Clicked Markers Control Panel */}
+        {clickedMarkers.length > 0 && (
+          <div className="absolute top-4 right-4 max-w-xs mb-2">
+            <Card className="bg-blue-50/95 backdrop-blur-sm border-blue-200">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-sm flex items-center text-blue-800">
+                    <MapPin className="h-4 w-4 mr-1 text-blue-600" />
+                    Trip Points ({clickedMarkers.length})
+                  </h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800"
+                    onClick={clearClickedMarkers}
+                  >
+                    ✕
+                  </Button>
+                </div>
+                <div className="space-y-1 max-h-24 overflow-y-auto mb-2">
+                  {clickedMarkers.map((marker, index) => (
+                    <div key={marker.id} className="text-xs flex items-center gap-2">
+                      <div className={`rounded-full w-4 h-4 flex items-center justify-center text-xs font-bold ${
+                        marker.type === 'start' ? 'bg-green-500 text-white' :
+                        'bg-blue-500 text-white'
+                      }`}>
+                        {marker.type === 'start' ? 'S' : 
+                         index + 1}
+                      </div>
+                      <span className="font-medium text-blue-800">{marker.name}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    className="flex-1 h-7 text-xs"
+                    onClick={() => {
+                      // Convert markers to waypoints and add to current trip
+                      const waypoints = convertMarkersToWaypoints();
+                      waypoints.forEach(waypoint => {
+                        onAddMarker({
+                          lat: waypoint.lat,
+                          lng: waypoint.lng,
+                          name: waypoint.name,
+                          type: 'stop'
+                        });
+                      });
+                      clearClickedMarkers();
+                    }}
+                  >
+                    Add to Trip
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={clearClickedMarkers}
+                  >
+                    Clear
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Map Controls */}
-        <div className="absolute top-4 right-4 flex flex-col gap-2">
+        <div className={`absolute right-4 flex flex-col gap-2 ${clickedMarkers.length > 0 ? 'top-40' : 'top-4'}`}>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -535,7 +704,6 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
         {/* Waypoint indicators would be rendered here based on map coordinates */}
       </div>
-    </Card>
   );
 };
 
