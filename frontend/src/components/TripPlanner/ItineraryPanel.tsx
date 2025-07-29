@@ -488,7 +488,7 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
       <div className="p-4 border-b">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold">Trip Itinerary</h2>
-          <Button
+          {/* <Button
             variant="outline"
             size="sm"
             onClick={() => setShowCreateTrip(true)}
@@ -496,7 +496,7 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
           >
             <Plus className="h-4 w-4 mr-1" />
             New Trip
-          </Button>
+          </Button> */}
         </div>
 
         {/* Trip Selector */}

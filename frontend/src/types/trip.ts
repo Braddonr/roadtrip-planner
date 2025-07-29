@@ -8,14 +8,14 @@ export interface Stop {
   departureTime?: string;
   travelTime?: string;
   travelDistance?: string;
-  type?: 'start' | 'destination' | 'waypoint';
+  type?: "start" | "destination" | "waypoint";
 }
 
 export interface Trip {
   id: string;
   name: string;
   stops: Stop[];
-  routeType: 'fastest' | 'scenic' | 'custom';
+  routeType: "fastest" | "scenic" | "custom";
   totalDistance: number;
   totalTime: number;
   estimatedFuelCost: number;
@@ -23,12 +23,13 @@ export interface Trip {
   endDate?: Date;
   createdAt: Date;
   updatedAt: Date;
+  stopsCount?: number; // For display when stops array is empty
 }
 
 export interface Recommendation {
   id: string;
   name: string;
-  type: 'attraction' | 'restaurant' | 'accommodation';
+  type: "attraction" | "restaurant" | "accommodation";
   rating: number;
   distance: string;
   duration: string;

@@ -59,13 +59,15 @@ interface InteractiveMapProps {
     lng: number;
     type: "start" | "stop" | "destination";
   }>;
-  onMarkersChange?: (markers: Array<{
-    id: string;
-    name: string;
-    lat: number;
-    lng: number;
-    type: "start" | "stop" | "destination";
-  }>) => void;
+  onMarkersChange?: (
+    markers: Array<{
+      id: string;
+      name: string;
+      lat: number;
+      lng: number;
+      type: "start" | "stop" | "destination";
+    }>
+  ) => void;
 }
 
 const InteractiveMap: React.FC<InteractiveMapProps> = ({
@@ -673,6 +675,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
                   <Button
                     size="sm"
                     className="flex-1 h-7 text-xs"
+                    disabled={clickedMarkers.length < 2}
                     onClick={() => {
                       setIsTripModalOpen(true);
                     }}

@@ -1,10 +1,10 @@
 import * as React from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
-import { DayPicker } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
@@ -26,29 +26,16 @@ export function DatePicker({
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
 
-  // Add custom CSS to override hover styles
-  React.useEffect(() => {
-    const style = document.createElement("style");
-    style.textContent = `
-      .rdp-custom .rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
-        background-color: #f3f4f6 !important;
-        color: #111827 !important;
-      }
-      .rdp-custom .rdp-day:hover:not([disabled]):not(.rdp-day_selected) {
-        background-color: #f3f4f6 !important;
-        color: #111827 !important;
-      }
-      .rdp-custom .rdp-button:focus:not([disabled]):not(.rdp-day_selected) {
-        background-color: #f3f4f6 !important;
-        color: #111827 !important;
-      }
-    `;
-    document.head.appendChild(style);
-    return () => document.head.removeChild(style);
-  }, []);
+  console.log("DatePicker rendered with:", { date, placeholder, disabled, open });
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover 
+      open={open} 
+      onOpenChange={(newOpen) => {
+        console.log("Popover open state changing:", { from: open, to: newOpen });
+        setOpen(newOpen);
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           variant={"outline"}
@@ -57,53 +44,58 @@ export function DatePicker({
             !date && "text-muted-foreground"
           )}
           disabled={disabled}
+          onClick={() => {
+            console.log("DatePicker button clicked");
+          }}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
           {date ? format(date, "PPP") : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
-        <DayPicker
-          mode="single"
-          selected={date}
-          onSelect={(selectedDate) => {
-            onDateChange?.(selectedDate);
-            setOpen(false);
+      <PopoverContent 
+        className="w-auto p-0 z-[60]" 
+        align="start"
+        onClick={(e) => {
+          console.log("PopoverContent clicked:", e.target);
+          e.stopPropagation();
+        }}
+        onPointerDownOutside={(e) => {
+          console.log("PopoverContent pointer down outside:", e.target);
+        }}
+      >
+        <div 
+          className="relative"
+          onClick={(e) => {
+            console.log("Calendar container clicked:", e.target);
+            e.stopPropagation();
           }}
-          disabled={(date) => date < new Date()}
-          initialFocus
-          styles={{
-            day: {
-              color: "#111827",
-              backgroundColor: "transparent",
-            },
-            day_selected: {
-              backgroundColor: "#2563eb",
-              color: "white",
-            },
-            day_today: {
-              backgroundColor: "#f3f4f6",
-              color: "#111827",
-              fontWeight: "600",
-            },
-            button: {
-              backgroundColor: "transparent",
-              border: "none",
-            },
+          onMouseDown={(e) => {
+            console.log("Calendar container mouse down:", e.target);
           }}
-          modifiersStyles={{
-            selected: {
-              backgroundColor: "#2563eb",
-              color: "white",
-            },
-            today: {
-              backgroundColor: "#f3f4f6",
-              color: "#111827",
-              fontWeight: "600",
-            },
-          }}
-          className="rdp-custom"
-        />
+        >
+          <Calendar
+            mode="single"
+            selected={date}
+            onSelect={(selectedDate) => {
+              console.log("🎯 Calendar onSelect triggered:", selectedDate);
+              onDateChange?.(selectedDate);
+              setOpen(false);
+            }}
+            onDayClick={(day, modifiers) => {
+              console.log("🖱️ Calendar onDayClick triggered:", { day, modifiers });
+            }}
+            disabled={(date) => {
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const checkDate = new Date(date);
+              checkDate.setHours(0, 0, 0, 0);
+              const isDisabled = checkDate < today;
+              console.log("Date disabled check:", { date: checkDate, today, isDisabled });
+              return isDisabled;
+            }}
+            initialFocus
+          />
+        </div>
       </PopoverContent>
     </Popover>
   );
