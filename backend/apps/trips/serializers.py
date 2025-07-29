@@ -50,9 +50,10 @@ class StopCreateSerializer(StopSerializer):
 
 
 class TripListSerializer(serializers.ModelSerializer):
-    """Serializer for listing trips (minimal data)."""
+    """Serializer for listing trips with stops data."""
     
     user_name = serializers.CharField(source='user.full_name', read_only=True)
+    stops = StopSerializer(many=True, read_only=True)
     stops_count = serializers.ReadOnlyField()
     duration_days = serializers.ReadOnlyField()
     
@@ -61,8 +62,10 @@ class TripListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'description', 'route_type', 'user_name',
             'total_distance', 'total_time', 'estimated_fuel_cost',
-            'start_date', 'end_date', 'duration_days', 'stops_count',
-            'is_public', 'created_at', 'updated_at'
+            'start_date', 'end_date', 'duration_days', 'stops', 'stops_count',
+            'is_public', 'fuel_efficiency', 'fuel_price_per_gallon',
+            'vehicle_make', 'vehicle_model', 'vehicle_year',
+            'created_at', 'updated_at'
         ]
 
 
