@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Clock, Route, DollarSign, Eye, Edit, Trash2 } from "lucide-react";
+import { toastService } from "@/services/toast";
+import { apiService } from "@/services/api";
 
 export const TripPlannerDemo: React.FC = () => {
   const [createdTrips, setCreatedTrips] = useState<Trip[]>([]);
@@ -45,11 +47,28 @@ export const TripPlannerDemo: React.FC = () => {
     setClickedMarkers(markers);
   };
 
-  const handleDeleteTrip = (tripId: string) => {
-    setCreatedTrips(prev => prev.filter(trip => trip.id !== tripId));
-    if (selectedTrip?.id === tripId) {
-      setSelectedTrip(null);
-      setClickedMarkers([]);
+  const handleDeleteTrip = async (tripId: string) => {
+    const tripToDelete = createdTrips.find(trip => trip.id === tripId);
+    const tripName = tripToDelete?.name || 'Trip';
+
+    try {
+      // If it's a real trip (has numeric ID), call API
+      if (!tripId.startsWith('trip-')) {
+        await apiService.deleteTrip(parseInt(tripId), tripName);
+      } else {
+        // For local trips, just show success toast
+        toastService.api.tripDeleted(tripName);
+      }
+
+      // Update local state
+      setCreatedTrips(prev => prev.filter(trip => trip.id !== tripId));
+      if (selectedTrip?.id === tripId) {
+        setSelectedTrip(null);
+        setClickedMarkers([]);
+      }
+    } catch (error) {
+      // Error toast is already handled by the API service
+      console.error('Failed to delete trip:', error);
     }
   };
 

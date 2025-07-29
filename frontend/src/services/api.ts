@@ -1,4 +1,6 @@
 // API service for backend integration
+import { toastService } from './toast';
+
 const API_BASE_URL = 'http://localhost:8000/api';
 
 // Helper function to get auth token
@@ -111,7 +113,9 @@ class ApiService {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || errorData.detail || `Login failed: ${response.status}`);
+      const errorMessage = errorData.error || errorData.detail || `Login failed: ${response.status}`;
+      toastService.api.loginFailed(errorMessage);
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
@@ -121,6 +125,10 @@ class ApiService {
       localStorage.setItem('access_token', data.tokens.access);
       localStorage.setItem('refresh_token', data.tokens.refresh);
     }
+
+    // Show success toast
+    const userName = data.user?.first_name || data.user?.username || 'User';
+    toastService.api.loginSuccess(userName);
 
     return data;
   }
@@ -142,6 +150,9 @@ class ApiService {
     // Clear tokens from localStorage
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    
+    // Show logout success toast
+    toastService.api.logoutSuccess();
   }
 
   async getCurrentUser() {
@@ -239,13 +250,19 @@ class ApiService {
     }
   }
 
-  async deleteTrip(tripId: number) {
+  async deleteTrip(tripId: number, tripName?: string) {
     try {
-      return await makeAuthenticatedRequest(`${this.baseUrl}/trips/${tripId}/`, {
+      const result = await makeAuthenticatedRequest(`${this.baseUrl}/trips/${tripId}/`, {
         method: 'DELETE',
       });
+      
+      // Show success toast
+      toastService.api.tripDeleted(tripName || 'Trip');
+      
+      return result;
     } catch (error) {
       console.error('Delete trip error:', error);
+      toastService.error(`Failed to delete trip: ${error.message || 'Unknown error'}`);
       throw error;
     }
   }

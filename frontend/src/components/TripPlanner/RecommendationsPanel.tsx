@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { mapboxService } from "@/services/mapbox";
 import { Recommendation } from "@/types/trip";
+import { toastService } from "@/services/toast";
 
 interface RecommendationsPanelProps {
   selectedStops?: Array<{
@@ -104,6 +105,14 @@ export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
       });
     } catch (error) {
       console.error("Failed to fetch recommendations:", error);
+      toastService.api.recommendationsLoadFailed();
+      
+      // Set empty recommendations on error
+      setRecommendations({
+        restaurants: [],
+        attractions: [],
+        accommodations: [],
+      });
     } finally {
       setIsLoading(false);
     }

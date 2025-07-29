@@ -6,6 +6,7 @@ import { LoginPage } from "./components/auth/LoginPage";
 import { RegisterPage } from "./components/auth/RegisterPage";
 import Home from "./components/home";
 import DynamicFeatureDemo from "./components/DynamicFeatureDemo";
+import { Toaster } from "./components/ui/toaster";
 import routes from "tempo-routes";
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
             } />
           </Routes>
           {import.meta.env.VITE_TEMPO === "true" && useRoutes(routes)}
+          <Toaster />
         </>
       </Suspense>
     </AuthProvider>

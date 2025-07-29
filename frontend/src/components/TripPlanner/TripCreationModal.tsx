@@ -33,6 +33,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { mapboxService } from "@/services/mapbox";
 import { apiService } from "@/services/api";
+import { toastService } from "@/services/toast";
 import { Trip, Stop, WeatherForecast } from "@/types/trip";
 import { cars, getCarById, formatCarName } from "@/data/cars";
 
@@ -155,6 +156,10 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
             };
           } catch (error) {
             console.warn(`Failed to get weather for ${stop.name}:`, error);
+            // Show warning toast only once for weather issues
+            if (stop === initialStops[0]) {
+              toastService.api.weatherLoadFailed();
+            }
             // Fallback weather data
             return {
               location: stop.name,
@@ -270,10 +275,16 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
         ...vehicleInfo,
       };
 
-      console.log('Creating trip with complete data:', backendTripData);
+      // Use toast service for better UX
+      const createdTrip = await toastService.promise(
+        apiService.createTrip(backendTripData),
+        {
+          loading: `Creating trip "${tripName.trim()}"...`,
+          success: (result) => `Trip "${tripName.trim()}" created successfully!`,
+          error: (error) => `Failed to create trip: ${error.message || 'Unknown error'}`
+        }
+      );
 
-      // Create trip with all stops in one API call
-      const createdTrip = await apiService.createTrip(backendTripData);
       console.log('Trip created successfully with all stops:', createdTrip);
 
       // Create local trip object for immediate UI update
@@ -297,8 +308,7 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
 
     } catch (error) {
       console.error('Failed to create trip:', error);
-      // You might want to show an error message to the user here
-      alert('Failed to create trip. Please try again.');
+      // Toast service already handled the error message
     } finally {
       setIsCreating(false);
     }
