@@ -21,7 +21,13 @@ import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Stop, Trip } from "@/types/trip";
 import { SearchResult } from "@/types/trip";
 import {
@@ -61,6 +67,9 @@ interface ItineraryPanelProps {
   allTrips?: Trip[];
   currentTrip?: Trip | null;
   onSelectTrip?: (trip: Trip) => void;
+  // New props for filtering
+  selectedFilter?: string;
+  onFilterChange?: (filter: string) => void;
 }
 
 const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
@@ -80,9 +89,30 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
   allTrips = [],
   currentTrip,
   onSelectTrip,
+  // New props for filtering
+  selectedFilter = "all",
+  onFilterChange,
 }) => {
-
   const [showCreateTrip, setShowCreateTrip] = useState(!hasExistingTrips);
+
+  // Filter trips based on selected filter
+  const filteredTrips = useMemo(() => {
+    if (selectedFilter === "all") return allTrips;
+    return allTrips.filter((trip) => trip.route_type === selectedFilter);
+  }, [allTrips, selectedFilter]);
+
+  // Calculate total distance and time for all fetched trips
+  const totalStats = useMemo(() => {
+    const totalDistance = filteredTrips.reduce(
+      (sum, trip) => sum + (trip.totalDistance || 0),
+      0
+    );
+    const totalTime = filteredTrips.reduce(
+      (sum, trip) => sum + (trip.totalTime || 0),
+      0
+    );
+    return { totalDistance, totalTime };
+  }, [filteredTrips]);
   const [tripName, setTripName] = useState("");
   const [tripDescription, setTripDescription] = useState("");
   const [routeType, setRouteType] = useState("fastest");
@@ -173,7 +203,7 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
         selectedCar === "custom"
           ? parseFloat(customMpg)
           : selectedCarData?.mpg || 25;
-      
+
       // Prepare vehicle information for the backend
       let vehicleInfo = {};
       if (selectedCar === "custom") {
@@ -348,8 +378,10 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
               {/* Custom car form - only show when "custom" is selected */}
               {selectedCar === "custom" && (
                 <div className="space-y-3 border rounded-md p-3 bg-muted/30">
-                  <h4 className="text-sm font-medium">Enter Your Vehicle Details</h4>
-                  
+                  <h4 className="text-sm font-medium">
+                    Enter Your Vehicle Details
+                  </h4>
+
                   <div>
                     <Label
                       htmlFor="custom-make"
@@ -366,7 +398,7 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
                       disabled={isLoading}
                     />
                   </div>
-                  
+
                   <div>
                     <Label
                       htmlFor="custom-model"
@@ -383,7 +415,7 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
                       disabled={isLoading}
                     />
                   </div>
-                  
+
                   <div>
                     <Label
                       htmlFor="custom-year"
@@ -400,7 +432,7 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
                       disabled={isLoading}
                     />
                   </div>
-                  
+
                   <div>
                     <Label
                       htmlFor="custom-mpg"
@@ -499,66 +531,6 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
           </Button> */}
         </div>
 
-        {/* Trip Selector */}
-        {isLoading && allTrips.length === 0 ? (
-          <div className="mb-4">
-            <Label className="text-sm font-medium mb-2 block">
-              Loading trips...
-            </Label>
-            <div className="p-4 text-center text-muted-foreground">
-              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
-            </div>
-          </div>
-        ) : allTrips.length > 0 ? (
-          <div className="mb-4">
-            <Label className="text-sm font-medium mb-2 block">
-              Select Trip ({allTrips.length} available)
-            </Label>
-            <div className="space-y-2 max-h-32 overflow-y-auto">
-              {allTrips.map((trip) => (
-                <div
-                  key={trip.id}
-                  className={`p-2 rounded-md border cursor-pointer transition-colors ${
-                    currentTrip?.id === trip.id
-                      ? "bg-primary/10 border-primary"
-                      : "bg-card hover:bg-accent border-border"
-                  }`}
-                  onClick={() => onSelectTrip?.(trip)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">
-                        {trip.name}
-                      </p>
-                      {trip.description && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          {trip.description}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-muted-foreground">
-                          {trip.stops?.length || 0} stops
-                        </span>
-                        {(trip.start_date || trip.startDate) && (
-                          <span className="text-xs text-muted-foreground">
-                            •{" "}
-                            {new Date(
-                              trip.start_date || trip.startDate
-                            ).toLocaleDateString()}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    {currentTrip?.id === trip.id && (
-                      <div className="w-2 h-2 bg-primary rounded-full ml-2 flex-shrink-0" />
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
         <SearchAutocomplete
           placeholder="Search for a destination"
           onSearch={onSearch || (() => {})}
@@ -567,129 +539,136 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
           isSearching={isSearching}
           className="mb-4"
         />
+      </div>
 
-        <div className="mt-4">
-          <p className="text-sm font-medium mb-2">Route Type</p>
+      {/* Trip List - Bigger section */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {/* Route Type Filter */}
+        <div className="mb-4">
+          <Label className="text-sm font-medium mb-2 block">
+            Filter by Route Type
+          </Label>
           <RadioGroup
-            defaultValue={selectedRouteType}
-            className="flex space-x-2"
-            onValueChange={onRouteTypeChange}
+            value={selectedFilter}
+            onValueChange={onFilterChange}
+            className="flex flex-wrap gap-2"
           >
             <div className="flex items-center space-x-1">
-              <RadioGroupItem value="fastest" id="fastest" />
-              <Label htmlFor="fastest">Fastest</Label>
+              <RadioGroupItem value="all" id="filter-all" />
+              <Label htmlFor="filter-all" className="text-sm">
+                All
+              </Label>
             </div>
             <div className="flex items-center space-x-1">
-              <RadioGroupItem value="scenic" id="scenic" />
-              <Label htmlFor="scenic">Scenic</Label>
+              <RadioGroupItem value="fastest" id="filter-fastest" />
+              <Label htmlFor="filter-fastest" className="text-sm">
+                Fastest
+              </Label>
             </div>
             <div className="flex items-center space-x-1">
-              <RadioGroupItem value="custom" id="custom" />
-              <Label htmlFor="custom">Custom</Label>
+              <RadioGroupItem value="scenic" id="filter-scenic" />
+              <Label htmlFor="filter-scenic" className="text-sm">
+                Scenic
+              </Label>
+            </div>
+            <div className="flex items-center space-x-1">
+              <RadioGroupItem value="custom" id="filter-custom" />
+              <Label htmlFor="filter-custom" className="text-sm">
+                Custom
+              </Label>
             </div>
           </RadioGroup>
         </div>
-      </div>
 
-      <div className="flex-1 overflow-y-auto p-2">
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="stops">
-            {(provided) => (
-              <div
-                {...provided.droppableProps}
-                ref={provided.innerRef}
-                className="space-y-2"
+        {/* Trip List */}
+        {isLoading && filteredTrips.length === 0 ? (
+          <div className="text-center text-muted-foreground py-8">
+            <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
+            <p>Loading trips...</p>
+          </div>
+        ) : filteredTrips.length > 0 ? (
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">
+              Trips ({filteredTrips.length}{" "}
+              {selectedFilter === "all" ? "total" : selectedFilter})
+            </Label>
+            {filteredTrips.map((trip) => (
+              <Card
+                key={trip.id}
+                className={`cursor-pointer transition-all hover:shadow-md ${
+                  currentTrip?.id === trip.id
+                    ? "ring-2 ring-primary bg-primary/5"
+                    : "hover:bg-accent/50"
+                }`}
+                onClick={() => onSelectTrip?.(trip)}
               >
-                {stops.map((stop, index) => (
-                  <Draggable key={stop.id} draggableId={stop.id} index={index}>
-                    {(provided) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                        className="border rounded-md bg-card"
-                      >
-                        <div className="p-3">
-                          <div className="flex justify-between items-start">
-                            <div className="flex items-center">
-                              <div className="bg-primary rounded-full w-6 h-6 flex items-center justify-center text-primary-foreground text-xs mr-2">
-                                {index + 1}
-                              </div>
-                              <div>
-                                <h3 className="font-medium">{stop.name}</h3>
-                                <p className="text-xs text-muted-foreground flex items-center">
-                                  <MapPin className="h-3 w-3 mr-1" />
-                                  {stop.address}
-                                </p>
-                              </div>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              onClick={() => onRemoveStop(stop.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-
-                          {(stop.arrivalTime || stop.departureTime) && (
-                            <div className="mt-2 text-xs">
-                              {stop.arrivalTime && (
-                                <div className="flex items-center text-muted-foreground">
-                                  <Clock className="h-3 w-3 mr-1" />
-                                  <span>Arrive: {stop.arrivalTime}</span>
-                                </div>
-                              )}
-                              {stop.departureTime && (
-                                <div className="flex items-center text-muted-foreground">
-                                  <Clock className="h-3 w-3 mr-1" />
-                                  <span>Depart: {stop.departureTime}</span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {index < stops.length - 1 && (
-                          <div className="px-3 py-2 border-t bg-muted/30 text-xs flex items-center">
-                            <CarIcon className="h-3 w-3 mr-1 text-muted-foreground" />
-                            <span className="text-muted-foreground">
-                              {stops[index + 1].travelTime} (
-                              {stops[index + 1].travelDistance})
-                            </span>
-                          </div>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm truncate mb-1">
+                        {trip.name}
+                      </h3>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                        <span className="bg-secondary px-2 py-1 rounded-full">
+                          {trip.route_type || "fastest"}
+                        </span>
+                        <span>{trip.stops?.length || 0} stops</span>
+                        {trip.startDate && (
+                          <span>
+                            • {new Date(trip.startDate).toLocaleDateString()}
+                          </span>
                         )}
                       </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-muted-foreground">
+                            Distance:{" "}
+                          </span>
+                          <span className="font-medium">
+                            {trip.totalDistance
+                              ? `${(trip.totalDistance / 1000).toFixed(1)} km`
+                              : "--"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Time: </span>
+                          <span className="font-medium">
+                            {trip.totalTime
+                              ? `${Math.round(
+                                  trip.totalTime / 3600
+                                )}h ${Math.round(
+                                  (trip.totalTime % 3600) / 60
+                                )}m`
+                              : "--"}
+                          </span>
+                        </div>
+                      </div>
+                      {trip.estimatedFuelCost && (
+                        <div className="text-xs mt-1">
+                          <span className="text-muted-foreground">
+                            Est. Cost:{" "}
+                          </span>
+                          <span className="font-medium text-green-600">
+                            ${trip.estimatedFuelCost.toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {currentTrip?.id === trip.id && (
+                      <div className="w-3 h-3 bg-primary rounded-full flex-shrink-0" />
                     )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
-      </div>
-
-      <div className="p-4 border-t">
-        <div className="flex justify-between items-center">
-          <div>
-            <p className="text-sm font-medium">Total Distance</p>
-            <p className="text-lg font-bold">
-              {currentTrip?.totalDistance ? `${currentTrip.totalDistance} miles` : '--'}
-            </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-          <div>
-            <p className="text-sm font-medium">Total Time</p>
-            <p className="text-lg font-bold">
-              {currentTrip?.totalTime ? `${currentTrip.totalTime}h` : '--'}
-            </p>
-          </div>
-        </div>
-        {currentTrip?.estimatedFuelCost && (
-          <div className="mt-2 text-center">
-            <p className="text-xs text-muted-foreground">
-              Est. Fuel Cost: <span className="font-medium">${currentTrip.estimatedFuelCost}</span>
+        ) : (
+          <div className="text-center text-muted-foreground py-8">
+            <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p className="text-sm">
+              {selectedFilter === "all"
+                ? "No trips found. Create your first trip!"
+                : `No ${selectedFilter} trips found.`}
             </p>
           </div>
         )}
