@@ -89,6 +89,92 @@ export const useTripStore = () => {
     []
   );
 
+  // Update an existing trip
+  const updateTrip = useCallback(
+    async (tripId: string, tripData: {
+      name: string;
+      description?: string;
+      route_type?: string;
+      start_date?: string;
+      end_date?: string;
+      fuel_efficiency?: number;
+      fuel_price_per_gallon?: number;
+      vehicle_make?: string;
+      vehicle_model?: string;
+      vehicle_year?: string;
+    }) => {
+      setStore((prev) => ({ ...prev, isLoading: true, error: null }));
+
+      try {
+        // Convert string ID to number for API call
+        const updatedTrip = await apiService.updateTrip(parseInt(tripId), tripData);
+
+        // Ensure the trip has a stops array initialized
+        const tripWithStops = {
+          ...updatedTrip,
+          stops: updatedTrip.stops || [], // Initialize empty stops array if not present
+        };
+
+        setStore((prev) => ({
+          ...prev,
+          allTrips: prev.allTrips.map(trip => 
+            trip.id === tripId ? tripWithStops : trip
+          ),
+          currentTrip: prev.currentTrip?.id === tripId ? tripWithStops : prev.currentTrip,
+          isLoading: false,
+        }));
+
+        return tripWithStops;
+      } catch (error: any) {
+        setStore((prev) => ({
+          ...prev,
+          error: error.message || "Failed to update trip",
+          isLoading: false,
+        }));
+        throw error;
+      }
+    },
+    []
+  );
+
+  // Delete a trip
+  const deleteTrip = useCallback(
+    async (tripId: string) => {
+      setStore((prev) => ({ ...prev, isLoading: true, error: null }));
+
+      try {
+        // Find the trip to get its name for the toast
+        const tripToDelete = store.allTrips.find(trip => trip.id === tripId);
+        const tripName = tripToDelete?.name || 'Trip';
+
+        // Convert string ID to number for API call
+        await apiService.deleteTrip(parseInt(tripId), tripName);
+
+        setStore((prev) => {
+          const updatedTrips = prev.allTrips.filter(trip => trip.id !== tripId);
+          
+          return {
+            ...prev,
+            allTrips: updatedTrips,
+            // If the deleted trip was the current trip, set a new current trip
+            currentTrip: prev.currentTrip?.id === tripId 
+              ? (updatedTrips.length > 0 ? updatedTrips[0] : null)
+              : prev.currentTrip,
+            isLoading: false,
+          };
+        });
+      } catch (error: any) {
+        setStore((prev) => ({
+          ...prev,
+          error: error.message || "Failed to delete trip",
+          isLoading: false,
+        }));
+        throw error;
+      }
+    },
+    [store.allTrips]
+  );
+
   // Set current trip
   const setCurrentTrip = useCallback((trip: Trip) => {
     setStore((prev) => ({
@@ -416,6 +502,8 @@ export const useTripStore = () => {
     ...store,
     loadTrips,
     createTrip,
+    updateTrip,
+    deleteTrip,
     setCurrentTrip,
     addStop,
     removeStop,

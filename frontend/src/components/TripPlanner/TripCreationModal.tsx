@@ -52,6 +52,7 @@ interface TripCreationModalProps {
     type: "start" | "stop" | "destination";
   }>;
   routeType: "fastest" | "scenic" | "custom";
+  editingTrip?: any; // Trip data for editing
 }
 
 export const TripCreationModal: React.FC<TripCreationModalProps> = ({
@@ -60,6 +61,7 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
   onCreateTrip,
   initialStops,
   routeType,
+  editingTrip,
 }) => {
   const [tripName, setTripName] = useState("");
   const [description, setDescription] = useState("");
@@ -91,6 +93,43 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
       calculateTripDetails();
     }
   }, [isOpen, initialStops]);
+
+  // Populate form fields when editing a trip
+  useEffect(() => {
+    if (editingTrip && isOpen) {
+      console.log("TripCreationModal: Populating form for editing:", editingTrip.name);
+      
+      setTripName(editingTrip.name || "");
+      setDescription(editingTrip.description || "");
+      setStartDate(editingTrip.startDate ? new Date(editingTrip.startDate) : undefined);
+      setEndDate(editingTrip.endDate ? new Date(editingTrip.endDate) : undefined);
+      
+      // Set vehicle information
+      if (editingTrip.vehicle_make && editingTrip.vehicle_model) {
+        const matchingCar = cars.find(car => 
+          car.make === editingTrip.vehicle_make && 
+          car.model === editingTrip.vehicle_model &&
+          car.year.toString() === editingTrip.vehicle_year
+        );
+        
+        if (matchingCar) {
+          setSelectedCar(matchingCar.id);
+        } else {
+          setSelectedCar("custom");
+          setCustomMake(editingTrip.vehicle_make || "");
+          setCustomModel(editingTrip.vehicle_model || "");
+          setCustomYear(editingTrip.vehicle_year || "");
+        }
+      }
+      
+      setFuelEfficiency(editingTrip.fuel_efficiency?.toString() || "25");
+      setFuelPrice(editingTrip.fuel_price_per_gallon?.toString() || "3.50");
+      setIsPublic(editingTrip.is_public || false);
+    } else if (!editingTrip && isOpen) {
+      // Reset form when creating new trip
+      resetForm();
+    }
+  }, [editingTrip, isOpen]);
 
   const calculateTripDetails = async () => {
     setIsLoading(true);
@@ -204,7 +243,7 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
   };
 
   const handleCreateTrip = async () => {
-    if (!tripName.trim() || !tripData) return;
+    if (!tripName.trim()) return;
 
     setIsCreating(true);
     try {
@@ -227,56 +266,7 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
         }
       }
 
-      // Prepare stops data
-      const stopsData = initialStops.map((stop, index) => ({
-        name: stop.name,
-        address: `${stop.lat.toFixed(4)}, ${stop.lng.toFixed(4)}`,
-        latitude: stop.lat,
-        longitude: stop.lng,
-        order: index + 1,
-        stop_type:
-          stop.type === "start"
-            ? "start"
-            : stop.type === "destination"
-            ? "destination"
-            : "waypoint",
-      }));
-
-      // Get route geometry for map visualization
-      let routeGeometry = null;
-      let routeBounds = null;
-
-      if (tripData && tripData.stops.length >= 2) {
-        try {
-          const coordinates = initialStops.map((stop) => [stop.lng, stop.lat]);
-          const directions = await mapboxService.getDirections(coordinates, {
-            profile:
-              routeType === "fastest"
-                ? "driving-traffic"
-                : routeType === "scenic"
-                ? "driving"
-                : "driving",
-            geometries: "polyline",
-            overview: "full",
-          });
-
-          if (directions.routes && directions.routes.length > 0) {
-            routeGeometry = directions.routes[0].geometry;
-
-            // Calculate bounds for map fitting
-            const lats = initialStops.map((stop) => stop.lat);
-            const lngs = initialStops.map((stop) => stop.lng);
-            routeBounds = {
-              northeast: { lat: Math.max(...lats), lng: Math.max(...lngs) },
-              southwest: { lat: Math.min(...lats), lng: Math.min(...lngs) },
-            };
-          }
-        } catch (error) {
-          console.warn("Failed to get route geometry:", error);
-        }
-      }
-
-      // Prepare complete trip data for backend (including stops)
+      // Prepare basic trip data for backend
       const backendTripData = {
         name: tripName.trim(),
         description: description.trim() || undefined,
@@ -288,52 +278,141 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
         fuel_efficiency: parseFloat(fuelEfficiency),
         fuel_price_per_gallon: parseFloat(fuelPrice),
         is_public: isPublic,
-        // Include stops in the trip creation
-        stops: stopsData,
-        // Include route data for map visualization
-        route_geometry: routeGeometry,
-        route_bounds: routeBounds,
-        // Include calculated metrics
-        total_distance: tripData?.totalDistance || 0,
-        total_time: tripData?.totalTime || 0,
-        estimated_fuel_cost: tripData?.estimatedFuelCost || 0,
         ...vehicleInfo,
       };
 
-      // Use toast service for better UX
-      const createdTrip = await toastService.promise(
-        apiService.createTrip(backendTripData),
-        {
-          loading: `Creating trip "${tripName.trim()}"...`,
-          success: (result) =>
-            `Trip "${tripName.trim()}" created successfully!`,
-          error: (error) =>
-            `Failed to create trip: ${error.message || "Unknown error"}`,
+      if (editingTrip) {
+        // Update existing trip
+        console.log("TripCreationModal: Updating trip:", editingTrip.id);
+        
+        const updatedTrip = await toastService.promise(
+          apiService.updateTrip(editingTrip.id, backendTripData),
+          {
+            loading: `Updating trip "${tripName.trim()}"...`,
+            success: (result) =>
+              `Trip "${tripName.trim()}" updated successfully!`,
+            error: (error) =>
+              `Failed to update trip: ${error.message || "Unknown error"}`,
+          }
+        );
+
+        console.log("Trip updated successfully:", updatedTrip);
+
+        // Create local trip object for immediate UI update
+        const localTrip: Omit<Trip, "id" | "createdAt" | "updatedAt"> = {
+          name: tripName.trim(),
+          stops: editingTrip.stops || [], // Keep existing stops when editing
+          routeType,
+          totalDistance: editingTrip.totalDistance || 0,
+          totalTime: editingTrip.totalTime || 0,
+          estimatedFuelCost: editingTrip.estimatedFuelCost || 0,
+          startDate,
+          endDate,
+        };
+
+        // Call parent callback for immediate UI update
+        onCreateTrip(localTrip);
+      } else {
+        // Create new trip
+        if (!tripData) return;
+
+        // Prepare stops data for new trip
+        const stopsData = initialStops.map((stop, index) => ({
+          name: stop.name,
+          address: `${stop.lat.toFixed(4)}, ${stop.lng.toFixed(4)}`,
+          latitude: stop.lat,
+          longitude: stop.lng,
+          order: index + 1,
+          stop_type:
+            stop.type === "start"
+              ? "start"
+              : stop.type === "destination"
+              ? "destination"
+              : "waypoint",
+        }));
+
+        // Get route geometry for map visualization
+        let routeGeometry = null;
+        let routeBounds = null;
+
+        if (tripData && tripData.stops.length >= 2) {
+          try {
+            const coordinates = initialStops.map((stop) => [stop.lng, stop.lat]);
+            const directions = await mapboxService.getDirections(coordinates, {
+              profile:
+                routeType === "fastest"
+                  ? "driving-traffic"
+                  : routeType === "scenic"
+                  ? "driving"
+                  : "driving",
+              geometries: "polyline",
+              overview: "full",
+            });
+
+            if (directions.routes && directions.routes.length > 0) {
+              routeGeometry = directions.routes[0].geometry;
+
+              // Calculate bounds for map fitting
+              const lats = initialStops.map((stop) => stop.lat);
+              const lngs = initialStops.map((stop) => stop.lng);
+              routeBounds = {
+                northeast: { lat: Math.max(...lats), lng: Math.max(...lngs) },
+                southwest: { lat: Math.min(...lats), lng: Math.min(...lngs) },
+              };
+            }
+          } catch (error) {
+            console.warn("Failed to get route geometry:", error);
+          }
         }
-      );
 
-      console.log("Trip created successfully with all stops:", createdTrip);
+        // Add additional data for new trip creation
+        const newTripData = {
+          ...backendTripData,
+          // Include stops in the trip creation
+          stops: stopsData,
+          // Include route data for map visualization
+          route_geometry: routeGeometry,
+          route_bounds: routeBounds,
+          // Include calculated metrics
+          total_distance: tripData?.totalDistance || 0,
+          total_time: tripData?.totalTime || 0,
+          estimated_fuel_cost: tripData?.estimatedFuelCost || 0,
+        };
 
-      // Create local trip object for immediate UI update
-      const localTrip: Omit<Trip, "id" | "createdAt" | "updatedAt"> = {
-        name: tripName.trim(),
-        stops: tripData.stops,
-        routeType,
-        totalDistance: tripData.totalDistance,
-        totalTime: tripData.totalTime,
-        estimatedFuelCost: tripData.estimatedFuelCost,
-        startDate,
-        endDate,
-      };
+        const createdTrip = await toastService.promise(
+          apiService.createTrip(newTripData),
+          {
+            loading: `Creating trip "${tripName.trim()}"...`,
+            success: (result) =>
+              `Trip "${tripName.trim()}" created successfully!`,
+            error: (error) =>
+              `Failed to create trip: ${error.message || "Unknown error"}`,
+          }
+        );
 
-      // Call parent callback for immediate UI update
-      onCreateTrip(localTrip);
+        console.log("Trip created successfully with all stops:", createdTrip);
+
+        // Create local trip object for immediate UI update
+        const localTrip: Omit<Trip, "id" | "createdAt" | "updatedAt"> = {
+          name: tripName.trim(),
+          stops: tripData.stops,
+          routeType,
+          totalDistance: tripData.totalDistance,
+          totalTime: tripData.totalTime,
+          estimatedFuelCost: tripData.estimatedFuelCost,
+          startDate,
+          endDate,
+        };
+
+        // Call parent callback for immediate UI update
+        onCreateTrip(localTrip);
+      }
 
       // Close modal and reset form
       onClose();
       resetForm();
     } catch (error) {
-      console.error("Failed to create trip:", error);
+      console.error(editingTrip ? "Failed to update trip:" : "Failed to create trip:", error);
       // Toast service already handled the error message
     } finally {
       setIsCreating(false);
@@ -379,9 +458,14 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
     >
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Trip</DialogTitle>
+          <DialogTitle>
+            {editingTrip ? "Edit Trip" : "Create New Trip"}
+          </DialogTitle>
           <DialogDescription>
-            Add details for your trip with {initialStops.length} stops
+            {editingTrip 
+              ? `Update details for "${editingTrip.name}"`
+              : `Add details for your trip with ${initialStops.length} stops`
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -664,15 +748,15 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
           </Button>
           <Button
             onClick={handleCreateTrip}
-            disabled={!tripName.trim() || !tripData || isLoading || isCreating}
+            disabled={!tripName.trim() || (!tripData && !editingTrip) || isLoading || isCreating}
           >
             {isCreating ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Creating Trip...
+                {editingTrip ? "Updating Trip..." : "Creating Trip..."}
               </>
             ) : (
-              "Create Trip"
+              editingTrip ? "Update Trip Details" : "Create Trip"
             )}
           </Button>
         </DialogFooter>

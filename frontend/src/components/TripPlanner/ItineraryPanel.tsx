@@ -12,6 +12,8 @@ import {
   Calendar,
   DollarSign,
   Fuel,
+  Edit,
+  AlertTriangle,
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { Button } from "@/components/ui/button";
@@ -21,6 +23,14 @@ import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -70,6 +80,24 @@ interface ItineraryPanelProps {
   // New props for filtering
   selectedFilter?: string;
   onFilterChange?: (filter: string) => void;
+  // New props for trip actions
+  onEditTrip?: (trip: Trip) => void;
+  onDeleteTrip?: (tripId: string) => void;
+  onUpdateTrip?: (
+    tripId: string,
+    tripData: {
+      name: string;
+      description?: string;
+      route_type?: string;
+      start_date?: string;
+      end_date?: string;
+      fuel_efficiency?: number;
+      fuel_price_per_gallon?: number;
+      vehicle_make?: string;
+      vehicle_model?: string;
+      vehicle_year?: string;
+    }
+  ) => void;
 }
 
 const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
@@ -92,8 +120,13 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
   // New props for filtering
   selectedFilter = "all",
   onFilterChange,
+  // New props for trip actions
+  onEditTrip,
+  onDeleteTrip,
+  onUpdateTrip,
 }) => {
   const [showCreateTrip, setShowCreateTrip] = useState(!hasExistingTrips);
+  const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
 
   // Internal state for filter when parent doesn't provide it
   const [internalFilter, setInternalFilter] = useState("all");
@@ -103,6 +136,52 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
   const handleFilterChange = (value: string) => {
     console.log("Setting internal filter to:", value);
     setInternalFilter(value);
+  };
+
+  // State for delete confirmation modal
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [tripToDelete, setTripToDelete] = useState<Trip | null>(null);
+
+  // Handle delete trip with confirmation
+  const handleDeleteClick = (trip: Trip, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card selection
+    setTripToDelete(trip);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (tripToDelete && onDeleteTrip) {
+      onDeleteTrip(tripToDelete.id);
+    }
+    setDeleteModalOpen(false);
+    setTripToDelete(null);
+  };
+
+  const cancelDelete = () => {
+    setDeleteModalOpen(false);
+    setTripToDelete(null);
+  };
+
+  // Handle edit trip
+  const handleEditClick = (trip: Trip, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card selection
+
+    console.log("Edit button clicked for trip:", trip.name);
+    console.log("onEditTrip callback exists:", !!onEditTrip);
+
+    // Call the onEditTrip callback with the trip data
+    // This should trigger the TripCreationModal with pre-filled data
+    if (onEditTrip) {
+      console.log("Calling onEditTrip with trip data");
+      onEditTrip(trip);
+    } else {
+      console.warn("onEditTrip callback not provided by parent component");
+      console.log("Parent component needs to implement onEditTrip prop that:");
+      console.log("1. Opens TripCreationModal with pre-filled data");
+      console.log("2. Changes button text to 'Update Trip Details'");
+      console.log("3. Calls PUT endpoint for updating trip");
+      console.log("Trip data that should be passed to modal:", trip);
+    }
   };
 
   // Filter trips based on selected filter
@@ -206,7 +285,7 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
 
   const handleCreateTrip = (e: React.FormEvent) => {
     e.preventDefault();
-    if (onCreateTrip && tripName.trim()) {
+    if (tripName.trim()) {
       // Get MPG from selected car or custom input
       const selectedCarData = getCarById(selectedCar);
       const mpg =
@@ -228,11 +307,11 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
         vehicleInfo = {
           vehicle_make: selectedCarData.make,
           vehicle_model: selectedCarData.model,
-          vehicle_year: selectedCarData.year,
+          vehicle_year: selectedCarData.year.toString(),
         };
       }
 
-      onCreateTrip({
+      const tripData = {
         name: tripName,
         description: tripDescription || undefined,
         route_type: routeType,
@@ -243,21 +322,36 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
         fuel_efficiency: mpg,
         fuel_price_per_gallon: parseFloat(fuelPrice),
         ...vehicleInfo, // Include vehicle information
-      });
-      // Reset form
-      setTripName("");
-      setTripDescription("");
-      setRouteType("fastest");
-      setStartDate(undefined);
-      setEndDate(undefined);
-      setSelectedCar("toyota-camry-2024");
-      setCustomMake("");
-      setCustomModel("");
-      setCustomYear("");
-      setCustomMpg("25");
-      setFuelPrice("3.50");
-      setShowCreateTrip(false);
+      };
+
+      // Check if we're editing or creating
+      if (editingTrip && onUpdateTrip) {
+        // Update existing trip
+        onUpdateTrip(editingTrip.id, tripData);
+      } else if (onCreateTrip) {
+        // Create new trip
+        onCreateTrip(tripData);
+      }
+
+      // Reset form and close modal
+      resetForm();
     }
+  };
+
+  const resetForm = () => {
+    setTripName("");
+    setTripDescription("");
+    setRouteType("fastest");
+    setStartDate(undefined);
+    setEndDate(undefined);
+    setSelectedCar("toyota-camry-2024");
+    setCustomMake("");
+    setCustomModel("");
+    setCustomYear("");
+    setCustomMpg("25");
+    setFuelPrice("3.50");
+    setEditingTrip(null);
+    setShowCreateTrip(false);
   };
 
   // Show create trip interface if no existing trips or user wants to create new trip
@@ -265,7 +359,9 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
     return (
       <div className="h-full w-[350px] bg-background border-r flex flex-col">
         <div className="p-4 border-b">
-          <h2 className="text-xl font-bold mb-4">Create New Trip</h2>
+          <h2 className="text-xl font-bold mb-4">
+            {editingTrip ? "Edit Trip" : "Create New Trip"}
+          </h2>
 
           <form
             onSubmit={handleCreateTrip}
@@ -495,7 +591,13 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
                 className="w-full"
                 disabled={isLoading || !tripName.trim()}
               >
-                {isLoading ? "Creating..." : "Create Trip"}
+                {isLoading
+                  ? editingTrip
+                    ? "Updating..."
+                    : "Creating..."
+                  : editingTrip
+                  ? "Update Trip Details"
+                  : "Create Trip"}
               </Button>
 
               {hasExistingTrips && (
@@ -710,9 +812,31 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
                         </div>
                       )}
                     </div>
-                    {currentTrip?.id === trip.id && (
-                      <div className="w-3 h-3 bg-primary rounded-full flex-shrink-0" />
-                    )}
+                    <div className="flex items-center gap-1">
+                      {currentTrip?.id === trip.id && (
+                        <div className="w-3 h-3 bg-primary rounded-full flex-shrink-0 mr-2" />
+                      )}
+                      {/* Edit Icon */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 hover:bg-blue-100"
+                        onClick={(e) => handleEditClick(trip, e)}
+                        title="Edit trip"
+                      >
+                        <Edit className="h-3 w-3 text-blue-600" />
+                      </Button>
+                      {/* Delete Icon */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 hover:bg-red-100"
+                        onClick={(e) => handleDeleteClick(trip, e)}
+                        title="Delete trip"
+                      >
+                        <Trash2 className="h-3 w-3 text-red-600" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -729,6 +853,54 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              Delete Trip
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this trip? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          {tripToDelete && (
+            <div className="py-4">
+              <div className="bg-muted/50 rounded-lg p-3">
+                <h4 className="font-semibold text-sm mb-1">
+                  {tripToDelete.name}
+                </h4>
+                <div className="text-xs text-muted-foreground">
+                  <span className="bg-secondary px-2 py-1 rounded-full mr-2">
+                    {tripToDelete.route_type || "fastest"}
+                  </span>
+                  <span>{tripToDelete.stops?.length || 0} stops</span>
+                  {tripToDelete.startDate && (
+                    <span>
+                      {" "}
+                      • {new Date(tripToDelete.startDate).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={cancelDelete}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Trip
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

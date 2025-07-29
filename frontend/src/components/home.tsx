@@ -28,6 +28,7 @@ export default function Home() {
   const { user, logout } = useAuth();
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
   const [focusedLocation, setFocusedLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
+  const [editingTrip, setEditingTrip] = useState<any>(null);
 
   const handleLogout = async () => {
     await logout();
@@ -81,6 +82,13 @@ export default function Home() {
         lng: result.lng,
       });
     }
+  };
+
+  // Handle edit trip from ItineraryPanel
+  const handleEditTrip = (trip: any) => {
+    console.log("Home: Edit trip requested:", trip.name);
+    console.log("Home: Setting editing trip data:", trip);
+    setEditingTrip(trip);
   };
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -182,6 +190,25 @@ export default function Home() {
             allTrips={tripStore.allTrips}
             currentTrip={tripStore.currentTrip}
             onSelectTrip={tripStore.setCurrentTrip}
+            // Edit and delete trip handlers
+            onEditTrip={handleEditTrip}
+            onDeleteTrip={async (tripId) => {
+              try {
+                console.log("Home: Delete trip requested:", tripId);
+                await tripStore.deleteTrip(tripId);
+              } catch (error) {
+                console.error("Failed to delete trip:", error);
+              }
+            }}
+            onUpdateTrip={async (tripId, tripData) => {
+              try {
+                console.log("Home: Update trip requested:", tripId, tripData);
+                await tripStore.updateTrip(tripId, tripData);
+                setEditingTrip(null); // Clear editing state after update
+              } catch (error) {
+                console.error("Failed to update trip:", error);
+              }
+            }}
           />
         </motion.div>
 
@@ -200,6 +227,9 @@ export default function Home() {
             searchResults={search.results}
             focusedLocation={focusedLocation}
             onRouteTypeChange={tripStore.updateRouteType}
+            // Pass editing trip data to InteractiveMap
+            editingTrip={editingTrip}
+            onEditComplete={() => setEditingTrip(null)}
             onSearchResultClick={(result) => {
               // Focus on the clicked search result first
               setFocusedLocation({

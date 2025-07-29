@@ -68,6 +68,9 @@ interface InteractiveMapProps {
       type: "start" | "stop" | "destination";
     }>
   ) => void;
+  // New props for editing trips
+  editingTrip?: any;
+  onEditComplete?: () => void;
 }
 
 const InteractiveMap: React.FC<InteractiveMapProps> = ({
@@ -86,6 +89,8 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
   onCreateTrip = () => {},
   initialMarkers = [],
   onMarkersChange = () => {},
+  editingTrip,
+  onEditComplete = () => {},
 }) => {
   const [zoom, setZoom] = useState(5);
   const [mapType, setMapType] = useState("streets-v11");
@@ -103,6 +108,14 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
   >([]);
   const [isTripModalOpen, setIsTripModalOpen] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
+
+  // Handle editing trip - open modal when editingTrip prop changes
+  useEffect(() => {
+    if (editingTrip) {
+      console.log("InteractiveMap: Opening TripCreationModal for editing:", editingTrip.name);
+      setIsTripModalOpen(true);
+    }
+  }, [editingTrip]);
 
   const routeTypes: RouteType[] = [
     {
@@ -868,14 +881,23 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
       {/* Trip Creation Modal */}
       <TripCreationModal
         isOpen={isTripModalOpen}
-        onClose={() => setIsTripModalOpen(false)}
+        onClose={() => {
+          setIsTripModalOpen(false);
+          if (editingTrip && onEditComplete) {
+            onEditComplete(); // Clear editing state in parent
+          }
+        }}
         onCreateTrip={(trip) => {
           onCreateTrip(trip);
           clearClickedMarkers();
           setIsTripModalOpen(false);
+          if (editingTrip && onEditComplete) {
+            onEditComplete(); // Clear editing state in parent
+          }
         }}
-        initialStops={clickedMarkers}
+        initialStops={editingTrip ? [] : clickedMarkers} // Don't use clicked markers when editing
         routeType={selectedRouteType as "fastest" | "scenic" | "custom"}
+        editingTrip={editingTrip} // Pass editing trip data to modal
       />
     </div>
   );
