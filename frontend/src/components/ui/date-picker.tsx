@@ -1,15 +1,5 @@
 import * as React from "react";
-import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
-
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 
 interface DatePickerProps {
   date?: Date;
@@ -24,79 +14,38 @@ export function DatePicker({
   placeholder = "Pick a date",
   disabled,
 }: DatePickerProps) {
-  const [open, setOpen] = React.useState(false);
-
-  console.log("DatePicker rendered with:", { date, placeholder, disabled, open });
+  console.log("DatePicker rendered with:", {
+    date,
+    placeholder,
+    disabled,
+  });
 
   return (
-    <Popover 
-      open={open} 
-      onOpenChange={(newOpen) => {
-        console.log("Popover open state changing:", { from: open, to: newOpen });
-        setOpen(newOpen);
-      }}
-    >
-      <PopoverTrigger asChild>
-        <Button
-          variant={"outline"}
-          className={cn(
-            "w-full justify-start text-left font-normal",
-            !date && "text-muted-foreground"
-          )}
-          disabled={disabled}
-          onClick={() => {
-            console.log("DatePicker button clicked");
-          }}
-        >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "PPP") : <span>{placeholder}</span>}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent 
-        className="w-auto p-0 z-[60]" 
-        align="start"
-        onClick={(e) => {
-          console.log("PopoverContent clicked:", e.target);
-          e.stopPropagation();
+    <div className="relative">
+      {/* Native date input styled to match the app */}
+      <input
+        type="date"
+        value={date ? date.toISOString().split('T')[0] : ''}
+        onChange={(e) => {
+          console.log("🎯 Native date input changed:", e.target.value);
+          if (e.target.value) {
+            const selectedDate = new Date(e.target.value);
+            console.log("Selected date object:", selectedDate);
+            onDateChange?.(selectedDate);
+          } else {
+            onDateChange?.(undefined);
+          }
         }}
-        onPointerDownOutside={(e) => {
-          console.log("PopoverContent pointer down outside:", e.target);
+        min={new Date().toISOString().split('T')[0]} // Disable past dates
+        disabled={disabled}
+        className="w-full h-10 pl-10 pr-3 py-2 text-sm border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        style={{
+          colorScheme: 'light', // Ensures consistent styling across browsers
         }}
-      >
-        <div 
-          className="relative"
-          onClick={(e) => {
-            console.log("Calendar container clicked:", e.target);
-            e.stopPropagation();
-          }}
-          onMouseDown={(e) => {
-            console.log("Calendar container mouse down:", e.target);
-          }}
-        >
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={(selectedDate) => {
-              console.log("🎯 Calendar onSelect triggered:", selectedDate);
-              onDateChange?.(selectedDate);
-              setOpen(false);
-            }}
-            onDayClick={(day, modifiers) => {
-              console.log("🖱️ Calendar onDayClick triggered:", { day, modifiers });
-            }}
-            disabled={(date) => {
-              const today = new Date();
-              today.setHours(0, 0, 0, 0);
-              const checkDate = new Date(date);
-              checkDate.setHours(0, 0, 0, 0);
-              const isDisabled = checkDate < today;
-              console.log("Date disabled check:", { date: checkDate, today, isDisabled });
-              return isDisabled;
-            }}
-            initialFocus
-          />
-        </div>
-      </PopoverContent>
-    </Popover>
+      />
+      
+      {/* Calendar icon overlay */}
+      <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+    </div>
   );
 }

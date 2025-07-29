@@ -97,21 +97,29 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
   // Populate form fields when editing a trip
   useEffect(() => {
     if (editingTrip && isOpen) {
-      console.log("TripCreationModal: Populating form for editing:", editingTrip.name);
-      
+      console.log(
+        "TripCreationModal: Populating form for editing:",
+        editingTrip.name
+      );
+
       setTripName(editingTrip.name || "");
       setDescription(editingTrip.description || "");
-      setStartDate(editingTrip.startDate ? new Date(editingTrip.startDate) : undefined);
-      setEndDate(editingTrip.endDate ? new Date(editingTrip.endDate) : undefined);
-      
+      setStartDate(
+        editingTrip.startDate ? new Date(editingTrip.startDate) : undefined
+      );
+      setEndDate(
+        editingTrip.endDate ? new Date(editingTrip.endDate) : undefined
+      );
+
       // Set vehicle information
       if (editingTrip.vehicle_make && editingTrip.vehicle_model) {
-        const matchingCar = cars.find(car => 
-          car.make === editingTrip.vehicle_make && 
-          car.model === editingTrip.vehicle_model &&
-          car.year.toString() === editingTrip.vehicle_year
+        const matchingCar = cars.find(
+          (car) =>
+            car.make === editingTrip.vehicle_make &&
+            car.model === editingTrip.vehicle_model &&
+            car.year.toString() === editingTrip.vehicle_year
         );
-        
+
         if (matchingCar) {
           setSelectedCar(matchingCar.id);
         } else {
@@ -121,7 +129,7 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
           setCustomYear(editingTrip.vehicle_year || "");
         }
       }
-      
+
       setFuelEfficiency(editingTrip.fuel_efficiency?.toString() || "25");
       setFuelPrice(editingTrip.fuel_price_per_gallon?.toString() || "3.50");
       setIsPublic(editingTrip.is_public || false);
@@ -284,7 +292,7 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
       if (editingTrip) {
         // Update existing trip
         console.log("TripCreationModal: Updating trip:", editingTrip.id);
-        
+
         const updatedTrip = await toastService.promise(
           apiService.updateTrip(editingTrip.id, backendTripData),
           {
@@ -337,7 +345,10 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
 
         if (tripData && tripData.stops.length >= 2) {
           try {
-            const coordinates = initialStops.map((stop) => [stop.lng, stop.lat]);
+            const coordinates = initialStops.map((stop) => [
+              stop.lng,
+              stop.lat,
+            ]);
             const directions = await mapboxService.getDirections(coordinates, {
               profile:
                 routeType === "fastest"
@@ -412,7 +423,10 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
       onClose();
       resetForm();
     } catch (error) {
-      console.error(editingTrip ? "Failed to update trip:" : "Failed to create trip:", error);
+      console.error(
+        editingTrip ? "Failed to update trip:" : "Failed to create trip:",
+        error
+      );
       // Toast service already handled the error message
     } finally {
       setIsCreating(false);
@@ -462,10 +476,9 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
             {editingTrip ? "Edit Trip" : "Create New Trip"}
           </DialogTitle>
           <DialogDescription>
-            {editingTrip 
+            {editingTrip
               ? `Update details for "${editingTrip.name}"`
-              : `Add details for your trip with ${initialStops.length} stops`
-            }
+              : `Add details for your trip with ${initialStops.length} stops`}
           </DialogDescription>
         </DialogHeader>
 
@@ -748,15 +761,22 @@ export const TripCreationModal: React.FC<TripCreationModalProps> = ({
           </Button>
           <Button
             onClick={handleCreateTrip}
-            disabled={!tripName.trim() || (!tripData && !editingTrip) || isLoading || isCreating}
+            disabled={
+              !tripName.trim() ||
+              (!tripData && !editingTrip) ||
+              isLoading ||
+              isCreating
+            }
           >
             {isCreating ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 {editingTrip ? "Updating Trip..." : "Creating Trip..."}
               </>
+            ) : editingTrip ? (
+              "Update Trip Details"
             ) : (
-              editingTrip ? "Update Trip Details" : "Create Trip"
+              "Create Trip"
             )}
           </Button>
         </DialogFooter>
