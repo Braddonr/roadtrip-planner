@@ -95,11 +95,21 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
 }) => {
   const [showCreateTrip, setShowCreateTrip] = useState(!hasExistingTrips);
 
+  // Internal state for filter when parent doesn't provide it
+  const [internalFilter, setInternalFilter] = useState("all");
+
+  // Always use internal state for now since parent doesn't provide filter management
+  const currentFilter = internalFilter;
+  const handleFilterChange = (value: string) => {
+    console.log("Setting internal filter to:", value);
+    setInternalFilter(value);
+  };
+
   // Filter trips based on selected filter
   const filteredTrips = useMemo(() => {
-    if (selectedFilter === "all") return allTrips;
-    return allTrips.filter((trip) => trip.route_type === selectedFilter);
-  }, [allTrips, selectedFilter]);
+    if (currentFilter === "all") return allTrips;
+    return allTrips.filter((trip) => trip.route_type === currentFilter);
+  }, [allTrips, currentFilter]);
 
   // Calculate total distance and time for all fetched trips
   const totalStats = useMemo(() => {
@@ -546,38 +556,84 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
         {/* Route Type Filter */}
         <div className="mb-4">
           <Label className="text-sm font-medium mb-2 block">
-            Filter by Route Type
+            Filter Your Current Trips by Route Type
           </Label>
-          <RadioGroup
-            value={selectedFilter}
-            onValueChange={onFilterChange}
-            className="flex flex-wrap gap-2"
-          >
+          <div className="flex flex-wrap gap-2">
             <div className="flex items-center space-x-1">
-              <RadioGroupItem value="all" id="filter-all" />
-              <Label htmlFor="filter-all" className="text-sm">
+              <input
+                type="radio"
+                id="filter-all"
+                name="routeFilter"
+                value="all"
+                checked={currentFilter === "all"}
+                onChange={(e) => {
+                  console.log("Filter changed to:", e.target.value);
+                  console.log("Current filter before:", currentFilter);
+                  console.log("Internal filter before:", internalFilter);
+                  console.log("onFilterChange exists:", !!onFilterChange);
+                  handleFilterChange(e.target.value);
+                }}
+                className="h-4 w-4 accent-black"
+              />
+              <Label htmlFor="filter-all" className="text-sm cursor-pointer">
                 All
               </Label>
             </div>
             <div className="flex items-center space-x-1">
-              <RadioGroupItem value="fastest" id="filter-fastest" />
-              <Label htmlFor="filter-fastest" className="text-sm">
+              <input
+                type="radio"
+                id="filter-fastest"
+                name="routeFilter"
+                value="fastest"
+                checked={currentFilter === "fastest"}
+                onChange={(e) => {
+                  console.log("Filter changed to:", e.target.value);
+                  handleFilterChange(e.target.value);
+                }}
+                className="h-4 w-4 accent-black"
+              />
+              <Label
+                htmlFor="filter-fastest"
+                className="text-sm cursor-pointer"
+              >
                 Fastest
               </Label>
             </div>
             <div className="flex items-center space-x-1">
-              <RadioGroupItem value="scenic" id="filter-scenic" />
-              <Label htmlFor="filter-scenic" className="text-sm">
+              <input
+                type="radio"
+                id="filter-scenic"
+                name="routeFilter"
+                value="scenic"
+                checked={currentFilter === "scenic"}
+                onChange={(e) => {
+                  console.log("Filter changed to:", e.target.value);
+                  handleFilterChange(e.target.value);
+                }}
+                className="h-4 w-4 accent-black"
+              />
+              <Label htmlFor="filter-scenic" className="text-sm cursor-pointer">
                 Scenic
               </Label>
             </div>
             <div className="flex items-center space-x-1">
-              <RadioGroupItem value="custom" id="filter-custom" />
-              <Label htmlFor="filter-custom" className="text-sm">
+              <input
+                type="radio"
+                id="filter-custom"
+                name="routeFilter"
+                value="custom"
+                checked={currentFilter === "custom"}
+                onChange={(e) => {
+                  console.log("Filter changed to:", e.target.value);
+                  handleFilterChange(e.target.value);
+                }}
+                className="h-4 w-4 accent-black"
+              />
+              <Label htmlFor="filter-custom" className="text-sm cursor-pointer">
                 Custom
               </Label>
             </div>
-          </RadioGroup>
+          </div>
         </div>
 
         {/* Trip List */}
@@ -590,7 +646,7 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
           <div className="space-y-3">
             <Label className="text-sm font-medium">
               Trips ({filteredTrips.length}{" "}
-              {selectedFilter === "all" ? "total" : selectedFilter})
+              {currentFilter === "all" ? "total" : currentFilter})
             </Label>
             {filteredTrips.map((trip) => (
               <Card
@@ -666,9 +722,9 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
           <div className="text-center text-muted-foreground py-8">
             <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p className="text-sm">
-              {selectedFilter === "all"
+              {currentFilter === "all"
                 ? "No trips found. Create your first trip!"
-                : `No ${selectedFilter} trips found.`}
+                : `No ${currentFilter} trips found.`}
             </p>
           </div>
         )}
