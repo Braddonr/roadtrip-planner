@@ -848,7 +848,7 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
             <p className="text-sm">
               {currentFilter === "all"
                 ? "No trips found. Click anywhere in the map to create your first trip!"
-                : `No ${currentFilter} trips found. Click anywhere in the map or search a destination to create your first trip!`}
+                : `No ${currentFilter} trips found. Click anywhere in the map or search a destination to create your first ${currentFilter} trip!`}
             </p>
           </div>
         )}
