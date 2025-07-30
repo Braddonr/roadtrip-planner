@@ -324,6 +324,7 @@ export default function Home() {
         <TripDetailsDashboard
           selectedTrip={tripStore.currentTrip}
           weatherForecasts={tripStore.weatherForecasts}
+          tripWeatherData={tripStore.tripWeatherData}
           onSave={() => console.log("Saving trip...", tripStore.currentTrip)}
           onShare={() => console.log("Sharing trip...", tripStore.currentTrip)}
         />

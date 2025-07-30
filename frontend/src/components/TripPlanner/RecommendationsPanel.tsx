@@ -202,9 +202,9 @@ export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
   return (
     <div className="w-full h-full flex flex-col">
       <div className="p-4 border-b">
-        <h2 className="text-lg font-semibold mb-2">AI Recommendations</h2>
+        <h2 className="text-lg font-semibold mb-2">Recommendations</h2>
         <p className="text-sm text-muted-foreground">
-          Powered by OpenAI for your trip stops
+          Check out these places during your trip
         </p>
       </div>
 

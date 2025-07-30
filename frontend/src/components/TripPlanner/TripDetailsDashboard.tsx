@@ -19,10 +19,12 @@ import {
   Route,
 } from "lucide-react";
 import { WeatherForecast, Trip } from "@/types/trip";
+import { TripWeatherResponse } from "@/services/openai";
 
 interface TripDetailsProps {
   selectedTrip?: Trip | null;
   weatherForecasts?: WeatherForecast[];
+  tripWeatherData?: TripWeatherResponse;
   onSave?: () => void;
   onShare?: () => void;
 }
@@ -30,6 +32,7 @@ interface TripDetailsProps {
 const TripDetailsDashboard = ({
   selectedTrip,
   weatherForecasts = [],
+  tripWeatherData,
   onSave = () => console.log("Saving trip..."),
   onShare = () => console.log("Sharing trip..."),
 }: TripDetailsProps) => {
@@ -332,41 +335,106 @@ const TripDetailsDashboard = ({
             </CardContent>
           </Card>
 
-          {/* Weather Forecasts */}
+          {/* AI Weather Forecasts */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-medium">Weather Forecasts</CardTitle>
+              <CardTitle className="text-lg font-medium flex items-center">
+                <CloudSun className="h-5 w-5 mr-2 text-blue-500" />
+                AI Weather Forecasts
+                {tripWeatherData && (
+                  <Badge variant="secondary" className="ml-2 text-xs">
+                    {tripWeatherData.tripDuration} days
+                  </Badge>
+                )}
+              </CardTitle>
+              {tripWeatherData && (
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <span>Avg: {tripWeatherData.averageTemp}°C</span>
+                  <span>•</span>
+                  <span>{tripWeatherData.dominantCondition}</span>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {weatherForecasts && weatherForecasts.length > 0 ? (
-                  weatherForecasts.map((forecast, index) => (
-                    <div
-                      key={index}
-                      className="flex justify-between items-center p-3 rounded-lg bg-muted/30"
-                    >
-                      <div>
-                        <p className="text-sm font-medium">{forecast.location}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {forecast.condition}
-                        </p>
+              {tripWeatherData && tripWeatherData.forecasts.length > 0 ? (
+                <div className="relative">
+                  {/* Horizontal Scrollable Weather Cards */}
+                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400" style={{ scrollbarWidth: 'thin' }}>
+                    {tripWeatherData.forecasts.map((forecast, index) => (
+                      <div
+                        key={forecast.id}
+                        className="flex-shrink-0 w-32 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-100 hover:shadow-md transition-shadow"
+                      >
+                        {/* Location & Date */}
+                        <div className="text-center mb-2">
+                          <h4 className="font-medium text-xs text-gray-800 truncate">
+                            {forecast.locationName}
+                          </h4>
+                          <p className="text-xs text-gray-500">
+                            {new Date(forecast.date).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric' 
+                            })}
+                          </p>
+                        </div>
+
+                        {/* Weather Icon & Condition */}
+                        <div className="text-center mb-2">
+                          <div className="flex justify-center mb-1">
+                            {renderWeatherIcon(forecast.condition)}
+                          </div>
+                          <p className="text-xs font-medium text-gray-700">
+                            {forecast.condition}
+                          </p>
+                        </div>
+
+                        {/* Temperature */}
+                        <div className="text-center mb-2">
+                          <div className="text-lg font-bold text-gray-800">
+                            {forecast.temperature.current}°C
+                          </div>
+                          <div className="flex justify-between text-xs text-gray-500">
+                            <span>H: {forecast.temperature.high}°</span>
+                            <span>L: {forecast.temperature.low}°</span>
+                          </div>
+                        </div>
+
+                        {/* Weather Details */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center">
+                              <Droplets className="h-3 w-3 text-blue-400 mr-1" />
+                              <span className="text-gray-600">{forecast.humidity}%</span>
+                            </div>
+                            <div className="flex items-center">
+                              <span className="text-gray-600">{forecast.windSpeed}km/h</span>
+                            </div>
+                          </div>
+                          {forecast.precipitation > 0 && (
+                            <div className="flex items-center justify-center text-xs">
+                              <Droplets className="h-3 w-3 text-blue-500 mr-1" />
+                              <span className="text-blue-600">{forecast.precipitation}% rain</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center">
-                        {renderWeatherIcon(forecast.condition)}
-                        <span className="ml-2 font-medium">
-                          {Math.round(forecast.temperature)}°F
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center text-muted-foreground py-8">
-                    <CloudSun className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Weather data not available</p>
-                    <p className="text-xs">Weather forecasts will appear here when available</p>
+                    ))}
                   </div>
-                )}
-              </div>
+                  
+                  {/* Scroll Indicator */}
+                  {tripWeatherData.forecasts.length > 3 && (
+                    <div className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-gradient-to-l from-white via-white to-transparent w-8 h-full flex items-center justify-end pr-1">
+                      <div className="text-gray-400 text-xs">→</div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center text-muted-foreground py-8">
+                  <CloudSun className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">AI Weather data loading...</p>
+                  <p className="text-xs">Weather forecasts will appear here when available</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

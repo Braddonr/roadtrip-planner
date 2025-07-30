@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Trip, Stop, Recommendation, WeatherForecast } from "../types/trip";
 import { apiService } from "../services/api";
-import { openaiService, OpenAIRecommendation } from "../services/openai";
+import { openaiService, OpenAIRecommendation, TripWeatherResponse } from "../services/openai";
 
 interface TripStore {
   currentTrip: Trip | null;
@@ -13,6 +13,7 @@ interface TripStore {
     accommodations: Recommendation[];
   };
   weatherForecasts: WeatherForecast[];
+  tripWeatherData?: TripWeatherResponse;
   isLoading: boolean;
   error: string | null;
 }
@@ -572,46 +573,68 @@ export const useTripStore = () => {
     }
   }, [store.currentTrip]);
 
-  // Load weather forecasts
+  // Load OpenAI weather forecasts for current trip
   const loadWeatherForecasts = useCallback(async () => {
-    if (!store.currentTrip?.stops || !store.currentTrip.stops.length) return;
+    if (!store.currentTrip?.stops || store.currentTrip.stops.length === 0) {
+      console.log("No current trip or stops available for weather forecasts");
+      return;
+    }
 
-    setStore((prev) => ({ ...prev, isLoading: true }));
+    setStore((prev) => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const weatherPromises = store.currentTrip.stops
-        .filter((stop) => stop.lat && stop.lng)
-        .map(async (stop, index) => {
-          const weatherData = await apiService.getWeatherForecast(
-            stop.lat!,
-            stop.lng!
-          );
-          return {
-            location: stop.name,
-            temperature: weatherData.current.temp_f,
-            condition: weatherData.current.condition.text,
-            icon: weatherData.current.condition.icon,
-            humidity: weatherData.current.humidity,
-            windSpeed: weatherData.current.wind_mph,
-            date: new Date(Date.now() + index * 24 * 60 * 60 * 1000),
-          };
-        });
+      console.log(`🌤️ Loading OpenAI weather forecasts for trip: ${store.currentTrip.name}`);
+      
+      // Prepare stops data for OpenAI weather
+      const stopsForWeather = store.currentTrip.stops.map(stop => ({
+        id: stop.id.toString(),
+        name: stop.name,
+        lat: stop.lat || stop.latitude,
+        lng: stop.lng || stop.longitude,
+      }));
 
-      const weatherForecasts = await Promise.all(weatherPromises);
+      // Get weather forecasts from OpenAI for all stops
+      const tripWeatherData = await openaiService.getWeatherForecastForTrip(
+        stopsForWeather,
+        store.currentTrip.startDate,
+        store.currentTrip.endDate
+      );
+
+      // Convert OpenAI weather to the existing WeatherForecast format for backward compatibility
+      const convertToWeatherForecast = (forecast: any): WeatherForecast => ({
+        location: forecast.locationName,
+        temperature: forecast.temperature.current,
+        condition: forecast.condition,
+        icon: forecast.icon,
+        humidity: forecast.humidity,
+        windSpeed: forecast.windSpeed,
+        date: new Date(forecast.date),
+      });
+
+      const weatherForecasts = tripWeatherData.forecasts.map(convertToWeatherForecast);
 
       setStore((prev) => ({
         ...prev,
         weatherForecasts,
+        tripWeatherData, // Store the full OpenAI weather response
         isLoading: false,
       }));
-    } catch (error) {
+
+      console.log(`✅ Loaded weather forecasts for ${tripWeatherData.forecasts.length} location-days:`, {
+        tripDuration: tripWeatherData.tripDuration,
+        averageTemp: tripWeatherData.averageTemp,
+        dominantCondition: tripWeatherData.dominantCondition,
+      });
+
+    } catch (error: any) {
+      console.error("❌ Failed to load OpenAI weather forecasts:", error);
       setStore((prev) => ({
         ...prev,
-        error: "Failed to load weather data",
+        error: error.message || "Failed to load weather forecasts",
         isLoading: false,
       }));
     }
-  }, [store.currentTrip?.stops]);
+  }, [store.currentTrip]);
 
   // Auto-calculate stats when stops change
   useEffect(() => {
