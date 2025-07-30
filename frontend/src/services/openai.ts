@@ -1,59 +1,20 @@
-// OpenAI service for fetching travel recommendations
+import { OpenAIRecommendation, RecommendationsResponse, WeatherForecast, TripWeatherResponse } from './types';
+import axios from 'axios';
+
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+const PEXELS_API_KEY = import.meta.env.VITE_PEXELS_API_KEY;
+const PIXABAY_API_KEY = import.meta.env.VITE_PIXABAY_API_KEY;
 const OPENAI_BASE_URL = "https://api.openai.com/v1";
-
-export interface OpenAIRecommendation {
-  id: string;
-  name: string;
-  description: string;
-  type: "restaurant" | "attraction" | "accommodation";
-  rating?: number;
-  priceLevel?: number;
-  address?: string;
-  imageUrl?: string;
-  tags: string[];
-  lat?: number;
-  lng?: number;
-  openingHours?: string;
-  website?: string;
-  phone?: string;
-}
-
-export interface RecommendationsResponse {
-  restaurants: OpenAIRecommendation[];
-  attractions: OpenAIRecommendation[];
-  accommodations: OpenAIRecommendation[];
-}
-
-export interface WeatherForecast {
-  id: string;
-  locationName: string;
-  date: string;
-  temperature: {
-    high: number;
-    low: number;
-    current: number;
-  };
-  condition: string;
-  description: string;
-  humidity: number;
-  windSpeed: number;
-  precipitation: number;
-  icon: string;
-  lat?: number;
-  lng?: number;
-}
-
-export interface TripWeatherResponse {
-  forecasts: WeatherForecast[];
-  tripDuration: number;
-  averageTemp: number;
-  dominantCondition: string;
-}
+const PEXELS_BASE_URL = "https://api.pexels.com/v1/search";
+const PIXABAY_BASE_URL = "https://pixabay.com/api/";
 
 class OpenAIService {
   private apiKey = OPENAI_API_KEY;
   private baseUrl = OPENAI_BASE_URL;
+  private pexelsApiKey = PEXELS_API_KEY;
+  private pixabayApiKey = PIXABAY_API_KEY;
+  private imageCache: { [key: string]: string } = {};
+  private usedImageUrls: Set<string> = new Set();
 
   constructor() {
     if (!this.apiKey) {
@@ -62,169 +23,39 @@ class OpenAIService {
     } else {
       console.log("✅ OpenAI API key loaded successfully");
     }
-  }
-
-  // Fetch recommendations for a specific location using OpenAI
-  async getRecommendationsForLocation(
-    locationName: string,
-    lat?: number,
-    lng?: number
-  ): Promise<RecommendationsResponse> {
-    if (!this.apiKey) {
-      console.warn("OpenAI API key not available, returning mock data");
-      return this.getMockRecommendations(locationName);
+    if (!this.pexelsApiKey) {
+      console.warn("⚠️ Pexels API key not defined, fallback may be limited");
     }
-
-    try {
-      console.log(`🤖 Fetching OpenAI recommendations for: ${locationName}`);
-
-      const prompt = this.buildRecommendationPrompt(locationName, lat, lng);
-
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gpt-3.5-turbo",
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are a travel expert providing detailed recommendations for travelers. Always respond with valid JSON format.",
-            },
-            {
-              role: "user",
-              content: prompt,
-            },
-          ],
-          max_tokens: 2000,
-          temperature: 0.7,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(
-          `OpenAI API error: ${response.status} ${response.statusText}`
-        );
-      }
-
-      const data = await response.json();
-      const content = data.choices[0]?.message?.content;
-
-      if (!content) {
-        throw new Error("No content received from OpenAI");
-      }
-
-      // Parse the JSON response
-      const recommendations = JSON.parse(content);
-
-      // Add image URLs using a placeholder service
-      const processedRecommendations = this.addImageUrls(
-        recommendations,
-        locationName
-      );
-
-      console.log(
-        `✅ OpenAI recommendations fetched for ${locationName}:`,
-        processedRecommendations
-      );
-      return processedRecommendations;
-    } catch (error) {
-      console.error(`❌ OpenAI API error for ${locationName}:`, error);
-      // Fallback to mock data
-      return this.getMockRecommendations(locationName);
+    if (!this.pixabayApiKey) {
+      console.warn("⚠️ Pixabay API key not defined, fallback may be limited");
+    }
+    // Load cached images from localStorage
+    const cached = localStorage.getItem('imageCache');
+    if (cached) {
+      this.imageCache = JSON.parse(cached);
     }
   }
 
-  // Fetch recommendations for multiple stops in a trip
-  async getRecommendationsForTrip(
-    stops: Array<{
-      id: string;
-      name: string;
-      lat?: number;
-      lng?: number;
-    }>
-  ): Promise<{
-    restaurants: OpenAIRecommendation[];
-    attractions: OpenAIRecommendation[];
-    accommodations: OpenAIRecommendation[];
-  }> {
-    console.log(`🗺️ Fetching recommendations for ${stops.length} stops`);
-
-    try {
-      // Fetch recommendations for each stop
-      const allRecommendations = await Promise.all(
-        stops.map((stop) =>
-          this.getRecommendationsForLocation(stop.name, stop.lat, stop.lng)
-        )
-      );
-
-      // Combine all recommendations
-      const combined = {
-        restaurants: [] as OpenAIRecommendation[],
-        attractions: [] as OpenAIRecommendation[],
-        accommodations: [] as OpenAIRecommendation[],
-      };
-
-      allRecommendations.forEach((rec, index) => {
-        // Add stop information to each recommendation
-        const stopName = stops[index].name;
-
-        combined.restaurants.push(
-          ...rec.restaurants.map((r) => ({
-            ...r,
-            id: `${stopName}-${r.id}`,
-            tags: [...r.tags, `Near ${stopName}`],
-          }))
-        );
-
-        combined.attractions.push(
-          ...rec.attractions.map((a) => ({
-            ...a,
-            id: `${stopName}-${a.id}`,
-            tags: [...a.tags, `Near ${stopName}`],
-          }))
-        );
-
-        combined.accommodations.push(
-          ...rec.accommodations.map((h) => ({
-            ...h,
-            id: `${stopName}-${h.id}`,
-            tags: [...h.tags, `Near ${stopName}`],
-          }))
-        );
-      });
-
-      // Remove duplicates and limit results
-      combined.restaurants = this.removeDuplicates(combined.restaurants).slice(
-        0,
-        12
-      );
-      combined.attractions = this.removeDuplicates(combined.attractions).slice(
-        0,
-        12
-      );
-      combined.accommodations = this.removeDuplicates(
-        combined.accommodations
-      ).slice(0, 8);
-
-      console.log(`✅ Combined recommendations:`, {
-        restaurants: combined.restaurants.length,
-        attractions: combined.attractions.length,
-        accommodations: combined.accommodations.length,
-      });
-
-      return combined;
-    } catch (error) {
-      console.error("❌ Error fetching trip recommendations:", error);
-      // Return mock data for all stops
-      return this.getMockRecommendationsForTrip(stops);
+  // Location-specific keyword mappings
+  private locationKeywordMap: { [key: string]: { [category: string]: string[] } } = {
+    nairobi: {
+      restaurant: ['nyama choma', 'kenyan cuisine', 'maasai decor', 'urban dining'],
+      attraction: ['national park', 'museum', 'maasai market', 'city skyline'],
+      accommodation: ['boutique hotel', 'modern hotel', 'safari lodge', 'urban retreat']
+    },
+    naivasha: {
+      restaurant: ['lakeside dining', 'fresh fish', 'kenyan seafood', 'outdoor patio'],
+      attraction: ['lake naivasha', 'flamingos', 'hells gate', 'rift valley'],
+      accommodation: ['lakeside lodge', 'tented camp', 'eco-lodge', 'lake view']
+    },
+    kisumu: {
+      restaurant: ['tilapia', 'lake victoria fish', 'luo cuisine', 'lakeside terrace'],
+      attraction: ['lake victoria', 'dunga hill', 'museum', 'fishing boats'],
+      accommodation: ['lakeside cabin', 'budget hotel', 'cultural lodge', 'lakefront']
     }
-  }
+  };
 
-  // Build the prompt for OpenAI
+  // Enhanced method to build specific recommendation prompts
   private buildRecommendationPrompt(
     locationName: string,
     lat?: number,
@@ -234,6 +65,8 @@ class OpenAIService {
 
     return `
 Please provide travel recommendations for ${locationName}${coordinates}. 
+Include specific details about cuisine types, architectural styles, and unique features for better image generation.
+
 Return the response as a JSON object with this exact structure:
 
 {
@@ -241,418 +74,651 @@ Return the response as a JSON object with this exact structure:
     {
       "id": "unique-id",
       "name": "Restaurant Name",
-      "description": "Brief description of the restaurant and cuisine",
+      "description": "Brief description including specific cuisine type, signature dishes, and dining atmosphere",
       "type": "restaurant",
       "rating": 4.5,
       "priceLevel": 2,
       "address": "Full address",
-      "tags": ["cuisine-type", "atmosphere", "specialty"],
+      "tags": ["cuisine-type", "atmosphere", "specialty", "signature-dish"],
       "openingHours": "9:00 AM - 10:00 PM",
-      "phone": "+1234567890"
+      "phone": "+1234567890",
+      "cuisineStyle": "specific cuisine type (e.g., 'Kenyan seafood', 'Italian', 'Indian curry house')",
+      "signatureDish": "main specialty dish",
+      "diningStyle": "atmosphere description (e.g., 'lakeside terrace dining', 'cozy indoor', 'rooftop restaurant')"
     }
   ],
   "attractions": [
     {
-      "id": "unique-id",
+      "id": "unique-id", 
       "name": "Attraction Name",
-      "description": "Description of what makes this place special",
+      "description": "Description including specific features, architecture, or natural elements",
       "type": "attraction",
       "rating": 4.8,
       "address": "Full address",
-      "tags": ["category", "activity-type", "best-time"],
-      "openingHours": "8:00 AM - 6:00 PM"
+      "tags": ["category", "activity-type", "best-time", "main-feature"],
+      "openingHours": "8:00 AM - 6:00 PM",
+      "attractionType": "specific type (e.g., 'natural lake', 'historical museum', 'cultural market', 'wildlife sanctuary')",
+      "mainFeature": "key visual element (e.g., 'flamingo colonies', 'traditional artifacts', 'panoramic views')",
+      "setting": "environment description (e.g., 'rift valley setting', 'colonial architecture', 'lakefront location')"
     }
   ],
   "accommodations": [
     {
       "id": "unique-id",
-      "name": "Hotel/Lodge Name",
-      "description": "Description of accommodation and amenities",
+      "name": "Hotel/Lodge Name", 
+      "description": "Description including architectural style, room types, and unique amenities",
       "type": "accommodation",
       "rating": 4.3,
       "priceLevel": 3,
       "address": "Full address",
-      "tags": ["hotel-type", "amenities", "location"],
+      "tags": ["hotel-type", "amenities", "location", "style"],
       "phone": "+1234567890",
-      "website": "https://example.com"
+      "website": "https://example.com",
+      "accommodationType": "specific type (e.g., 'lakeside lodge', 'boutique hotel', 'safari camp')",
+      "architecture": "building style (e.g., 'traditional African design', 'modern lakefront', 'colonial style')",
+      "uniqueFeature": "standout amenity (e.g., 'infinity pool overlooking lake', 'traditional thatched roofs', 'private balconies')"
     }
   ]
 }
 
-Please provide 3-4 recommendations for each category. Focus on popular, well-reviewed places that are actually located in or near ${locationName}. Make sure all JSON is valid and properly formatted.
+Please provide 3-4 recommendations for each category. Focus on popular, well-reviewed places that are actually located in or near ${locationName}. Include specific details about cuisine types, architectural features, and unique characteristics for each recommendation.
     `.trim();
   }
 
-  // Add category-specific image URLs to recommendations
-  private addImageUrls(
+  // Enhanced addImageUrls to prevent duplicates
+  private async addImageUrls(
     recommendations: any,
     locationName: string
-  ): RecommendationsResponse {
-    const addImages = (items: any[], type: string) => {
-      return items.map((item, index) => ({
-        ...item,
-        imageUrl: this.getCategorySpecificImageUrl(
-          type,
-          item.name,
-          locationName,
-          index
-        ),
-      }));
+  ): Promise<RecommendationsResponse> {
+    const addImages = async (items: any[], type: string) => {
+      return await Promise.all(
+        items.map(async (item, index) => {
+          const cacheKey = `${type}-${item.id}-${index}`;
+          if (this.imageCache[cacheKey]) {
+            return { ...item, imageUrl: this.imageCache[cacheKey] };
+          }
+          
+          let imageUrl = await this.getCategorySpecificImageUrl(
+            type,
+            item.name,
+            item.description,
+            locationName,
+            index,
+            item
+          );
+
+          // Ensure unique image URL
+          let attempt = 0;
+          while (this.usedImageUrls.has(imageUrl) && attempt < 3) {
+            console.warn(`Duplicate image URL detected for ${type} - ${item.name}, retrying...`);
+            imageUrl = await this.getCategorySpecificImageUrl(
+              type,
+              item.name,
+              item.description,
+              locationName,
+              index + attempt + 1, // Vary index for new prompt
+              item
+            );
+            attempt++;
+          }
+
+          this.usedImageUrls.add(imageUrl);
+          this.imageCache[cacheKey] = imageUrl;
+          // Persist cache to localStorage
+          localStorage.setItem('imageCache', JSON.stringify(this.imageCache));
+          return { ...item, imageUrl };
+        })
+      );
     };
+
+    // Reset usedImageUrls for each new batch
+    this.usedImageUrls.clear();
 
     return {
-      restaurants: addImages(recommendations.restaurants || [], "restaurant"),
-      attractions: addImages(recommendations.attractions || [], "attraction"),
-      accommodations: addImages(
-        recommendations.accommodations || [],
-        "accommodation"
-      ),
+      restaurants: await addImages(recommendations.restaurants || [], "restaurant"),
+      attractions: await addImages(recommendations.attractions || [], "attraction"),
+      accommodations: await addImages(recommendations.accommodations || [], "accommodation"),
     };
   }
 
-  // Generate category-specific image URLs based on recommendation content
-  private getCategorySpecificImageUrl(
+  // Enhanced image generation with unique prompts
+  private async getCategorySpecificImageUrl(
     category: string,
     itemName: string,
+    itemDescription: string,
     locationName: string,
-    index: number
-  ): string {
-    // Create search terms based on the recommendation name and category
-    const searchTerm = this.generateImageSearchTerm(
-      category,
-      itemName,
-      locationName
-    );
+    index: number,
+    extraData?: any
+  ): Promise<string> {
+    if (!this.apiKey) {
+      console.warn("OpenAI API key not available, using fallback image");
+      return this.getFallbackImage(category, itemName, itemDescription, locationName, index, extraData);
+    }
 
-    // Create a consistent seed based on item name for reproducible results
-    const seed = this.createConsistentSeed(itemName);
+    try {
+      const prompt = this.generateImagePrompt(category, itemName, itemDescription, locationName, index, extraData);
+      
+      console.log(`🎨 Generating ${category} image for ${itemName} with prompt:`, prompt.substring(0, 100) + '...');
+      
+      const response = await fetch(`${this.baseUrl}/images/generations`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "dall-e-3",
+          prompt,
+          n: 1,
+          size: "1024x1024",
+          quality: "standard",
+          response_format: "url",
+        }),
+      });
 
-    // Use curated category-specific images
-    return this.getCuratedCategoryImage(category, itemName, seed);
-  }
+      if (!response.ok) {
+        throw new Error(`DALL·E API error: ${response.status} ${response.statusText}`);
+      }
 
-  // Generate relevant search terms for images based on category and item name
-  private generateImageSearchTerm(
-    category: string,
-    itemName: string,
-    locationName: string
-  ): string {
-    const cleanItemName = itemName
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, "")
-      .trim();
+      const data = await response.json();
+      const imageUrl = data.data[0]?.url;
+      if (!imageUrl) {
+        throw new Error("No image URL received from DALL·E");
+      }
 
-    switch (category) {
-      case "restaurant":
-        // Extract cuisine type or food keywords from restaurant name
-        const foodKeywords = this.extractFoodKeywords(cleanItemName);
-        if (foodKeywords.length > 0) {
-          return `${foodKeywords.join(",")},restaurant,food,dining`;
-        }
-        return "restaurant,food,dining,cuisine";
-
-      case "attraction":
-        // Extract attraction type keywords
-        const attractionKeywords =
-          this.extractAttractionKeywords(cleanItemName);
-        if (attractionKeywords.length > 0) {
-          return `${attractionKeywords.join(
-            ","
-          )},tourism,travel,${locationName}`;
-        }
-        return "tourism,attraction,landmark,travel";
-
-      case "accommodation":
-        // Extract hotel type keywords
-        const hotelKeywords = this.extractHotelKeywords(cleanItemName);
-        if (hotelKeywords.length > 0) {
-          return `${hotelKeywords.join(",")},hotel,accommodation`;
-        }
-        return "hotel,accommodation,lodging,hospitality";
-
-      default:
-        return `${locationName},travel,tourism`;
+      console.log(`✅ Generated ${category} image for ${itemName}: ${imageUrl}`);
+      return imageUrl;
+    } catch (error) {
+      console.error(`❌ Failed to generate ${category} image for ${itemName}:`, error);
+      return this.getFallbackImage(category, itemName, itemDescription, locationName, index, extraData);
     }
   }
 
-  // Extract food-related keywords from restaurant names
-  private extractFoodKeywords(name: string): string[] {
-    const foodTerms = [
-      "pizza",
-      "burger",
-      "sushi",
-      "pasta",
-      "chinese",
-      "italian",
-      "mexican",
-      "indian",
-      "thai",
-      "japanese",
-      "french",
-      "american",
-      "seafood",
-      "steakhouse",
-      "bbq",
-      "cafe",
-      "coffee",
-      "bakery",
-      "bistro",
-      "grill",
-      "diner",
-      "buffet",
-    ];
+  // Enhanced prompt generation with increased variability
+  private generateImagePrompt(
+    category: string,
+    itemName: string,
+    itemDescription: string,
+    locationName: string,
+    index: number,
+    extraData?: any
+  ): string {
+    const cleanItemName = itemName.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
+    const cleanDescription = itemDescription.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
+    const variation = index % 8; // Expanded to 8 variations
 
-    return foodTerms.filter((term) => name.includes(term));
+    const lightingVariations = [
+      "golden hour glow", "bright midday light", "soft morning light", "twilight ambiance",
+      "warm evening light", "overcast soft light", "sunset hues", "clear daylight"
+    ];
+    const perspectiveVariations = [
+      "wide-angle view", "close-up detail", "aerial perspective", "ground-level view",
+      "panoramic view", "angled facade view", "interior focus", "landscape-integrated view"
+    ];
+    const lighting = lightingVariations[variation];
+    const perspective = perspectiveVariations[variation];
+
+    // Add unique identifier to prompt
+    const uniqueId = extraData?.id || cleanItemName;
+
+    switch (category) {
+      case "restaurant":
+        return this.generateRestaurantImagePrompt(cleanItemName, cleanDescription, locationName, lighting, perspective, extraData, uniqueId);
+      
+      case "attraction":
+        return this.generateAttractionImagePrompt(cleanItemName, cleanDescription, locationName, lighting, perspective, extraData, uniqueId);
+      
+      case "accommodation":
+        return this.generateAccommodationImagePrompt(cleanItemName, cleanDescription, locationName, lighting, perspective, extraData, uniqueId);
+      
+      default:
+        return `A high-quality, photorealistic ${perspective} of a travel scene at ${itemName} (ID: ${uniqueId}) in ${locationName}, Kenya, with ${lighting}, showcasing unique cultural or natural elements of Kenya.`;
+    }
   }
 
-  // Extract attraction-related keywords from attraction names
-  private extractAttractionKeywords(name: string): string[] {
-    const attractionTerms = [
-      "museum",
-      "park",
-      "gallery",
-      "monument",
-      "cathedral",
-      "church",
-      "temple",
-      "palace",
-      "castle",
-      "fort",
-      "beach",
-      "lake",
-      "mountain",
-      "garden",
-      "zoo",
-      "aquarium",
-      "theater",
-      "stadium",
-      "market",
-      "square",
-      "bridge",
-    ];
+  // Specific restaurant image prompt with unique details
+  private generateRestaurantImagePrompt(
+    itemName: string,
+    description: string,
+    locationName: string,
+    lighting: string,
+    perspective: string,
+    extraData?: any,
+    uniqueId?: string
+  ): string {
+    const cuisineStyle = extraData?.cuisineStyle || this.extractCuisineType(description);
+    const signatureDish = extraData?.signatureDish || this.extractSignatureDish(description);
+    const diningStyle = extraData?.diningStyle || this.extractDiningStyle(description);
 
-    return attractionTerms.filter((term) => name.includes(term));
+    const dishVariations = [
+      "grilled with Kenyan spices and ugali", "fried with crispy sukuma wiki", "stewed with rich coconut sauce", "served with chapati and kachumbari",
+      "roasted with Luo-inspired herbs", "marinated in coastal flavors", "presented on banana leaves with samosas", "garnished with fresh coriander"
+    ];
+    const settingVariations = [
+      "lakeside terrace with Lake Victoria views and Luo fishing boats", "vibrant outdoor patio with acacia trees and Maasai art", 
+      "cozy indoor with beaded Maasai decor and wooden carvings", "rooftop with Kisumu skyline and sunset views",
+      "garden setting with tropical plants and Kenyan pottery", "open-air dining with savannah backdrop and fire pit",
+      "rustic interior with Luo cultural artifacts", "modern dining with glass windows and city views"
+    ];
+    const variation = parseInt(this.createConsistentSeed(`${itemName}-${uniqueId}-${locationName}`)) % 8;
+    const dishPrep = dishVariations[variation];
+    const setting = settingVariations[variation];
+
+    let foodDescription = "";
+    if (cuisineStyle.includes("kenyan") || cuisineStyle.includes("african")) {
+      foodDescription = `${dishPrep} ${signatureDish || "dishes like tilapia, nyama choma, ugali, sukuma wiki, or githeri"}`;
+    } else if (cuisineStyle.includes("seafood") || description.includes("fish")) {
+      foodDescription = `${dishPrep} seafood like tilapia, prawns, or fish curry with Luo spices`;
+    } else if (cuisineStyle.includes("italian")) {
+      foodDescription = `${dishPrep} Italian dishes like wood-fired pizza or creamy pasta`;
+    } else if (cuisineStyle.includes("indian")) {
+      foodDescription = `${dishPrep} Indian dishes like spicy curry, naan, or tandoori chicken`;
+    } else if (cuisineStyle.includes("cafe") || description.includes("coffee")) {
+      foodDescription = `${dishPrep} cafe items like artisanal coffee, mandazi, or Kenyan pastries`;
+    } else {
+      foodDescription = `${dishPrep} authentic Kenyan cuisine artfully presented`;
+    }
+
+    return `A photorealistic ${perspective} of a Kenyan restaurant scene at ${itemName} (ID: ${uniqueId}) in ${locationName}, showcasing ${foodDescription} elegantly plated on a table in a ${setting}. The scene includes Maasai-patterned tablecloths, Luo-inspired decor, or African wood carvings, captured with ${lighting}, emphasizing a vibrant, culturally rich dining experience unique to ${locationName}, Kenya.`;
   }
 
-  // Extract hotel-related keywords from accommodation names
-  private extractHotelKeywords(name: string): string[] {
-    const hotelTerms = [
-      "hotel",
-      "resort",
-      "lodge",
-      "inn",
-      "motel",
-      "hostel",
-      "villa",
-      "suite",
-      "grand",
-      "luxury",
-      "boutique",
-      "budget",
-      "business",
-      "spa",
-      "beach",
-      "mountain",
-    ];
+  // Specific attraction image prompt with unique details
+  private generateAttractionImagePrompt(
+    itemName: string,
+    description: string,
+    locationName: string,
+    lighting: string,
+    perspective: string,
+    extraData?: any,
+    uniqueId?: string
+  ): string {
+    const attractionType = extraData?.attractionType || this.extractAttractionType(itemName, description);
+    const mainFeature = extraData?.mainFeature || this.extractMainFeature(description);
+    const setting = extraData?.setting || this.extractSetting(description);
 
-    return hotelTerms.filter((term) => name.includes(term));
+    const featureVariations = [
+      "featuring vibrant wildlife like flamingos or hippos", "showcasing rift valley gorges or rock formations",
+      "highlighting Luo artifacts or Maasai beadwork exhibits", "emphasizing lush savannah or Lake Victoria views",
+      "showcasing traditional Kenyan huts or colonial architecture", "featuring local fishing or market activities",
+      "highlighting dramatic cliffs or volcanic landscapes", "emphasizing vibrant Maasai or Luo market stalls"
+    ];
+    const variation = parseInt(this.createConsistentSeed(`${itemName}-${uniqueId}-${locationName}`)) % 8;
+    const feature = featureVariations[variation];
+
+    let visualDescription = "";
+    if (attractionType.includes("lake") || itemName.toLowerCase().includes("naivasha") || itemName.toLowerCase().includes("victoria")) {
+      visualDescription = `${perspective} of a serene lake with clear water, acacia trees, and ${mainFeature || "flamingos or fishing boats"}`;
+    } else if (attractionType.includes("museum")) {
+      visualDescription = `${perspective} of a museum with colonial or Luo-inspired architecture, displaying ${mainFeature || "traditional Luo artifacts or Maasai beadwork"}`;
+    } else if (attractionType.includes("market")) {
+      visualDescription = `${perspective} of a bustling market with colorful stalls, beaded crafts, and ${mainFeature || "fresh fish or produce"}`;
+    } else if (attractionType.includes("park") || attractionType.includes("sanctuary")) {
+      visualDescription = `${perspective} of a nature park with savannah landscapes, zebras, and ${mainFeature || "walking trails or wildlife"}`;
+    } else if (attractionType.includes("gorge") || attractionType.includes("rock")) {
+      visualDescription = `${perspective} of dramatic gorges or volcanic rock formations with ${mainFeature || "rift valley views"}`;
+    } else if (attractionType.includes("cultural")) {
+      visualDescription = `${perspective} of a cultural site with traditional Luo or Maasai huts and ${mainFeature || "community performances"}`;
+    } else {
+      visualDescription = `${perspective} of a scenic landmark with ${mainFeature || "natural Kenyan beauty"}`;
+    }
+
+    return `A stunning, photorealistic ${visualDescription} at ${itemName} (ID: ${uniqueId}) in ${locationName}, Kenya, captured with ${lighting}, ${feature}. Include visitors for scale and vibrant Kenyan elements like acacia trees, Luo fishing boats, or Maasai patterns specific to ${locationName}.`;
   }
 
-  // Create a consistent seed for reproducible image results
-  private createConsistentSeed(itemName: string): string {
-    // Simple hash function to create consistent seed from item name
+  // Specific accommodation image prompt with unique details
+  private generateAccommodationImagePrompt(
+    itemName: string,
+    description: string,
+    locationName: string,
+    lighting: string,
+    perspective: string,
+    extraData?: any,
+    uniqueId?: string
+  ): string {
+    const accommodationType = extraData?.accommodationType || this.extractAccommodationType(itemName, description);
+    const architecture = extraData?.architecture || this.extractArchitecture(description);
+    const uniqueFeature = extraData?.uniqueFeature || this.extractUniqueFeature(description);
+
+    const featureVariations = [
+      "featuring a welcoming entrance with Luo or Maasai art", "showcasing a cozy room with Kenyan fabrics",
+      "highlighting lush gardens or infinity pools with lake views", "emphasizing thatched roofs or acacia wood beams",
+      "featuring lakefront verandas with Lake Victoria scenery", "showcasing modern glass facades with city views",
+      "highlighting tented camp setups with savannah backdrop", "emphasizing cultural decor like beaded lamps or Luo pottery"
+    ];
+    const variation = parseInt(this.createConsistentSeed(`${itemName}-${uniqueId}-${locationName}`)) % 8;
+    const feature = featureVariations[variation];
+
+    let visualDescription = "";
+    if (accommodationType.includes("lodge")) {
+      visualDescription = `${perspective} of a safari lodge with thatched roofs, wooden structures, and ${uniqueFeature || "savannah or lake views"}`;
+    } else if (accommodationType.includes("resort")) {
+      visualDescription = `${perspective} of a luxury resort with manicured gardens, pools, and ${uniqueFeature || "modern amenities"}`;
+    } else if (accommodationType.includes("hotel")) {
+      visualDescription = `${perspective} of a hotel with modern or colonial facades and ${uniqueFeature || "grand entrance with Kenyan art"}`;
+    } else if (accommodationType.includes("camp")) {
+      visualDescription = `${perspective} of a tented camp with canvas structures and ${uniqueFeature || "lakeside or savannah views"}`;
+    } else {
+      visualDescription = `${perspective} of an accommodation with ${uniqueFeature || "authentic Kenyan design"}`;
+    }
+
+    return `A photorealistic ${visualDescription} at ${itemName} (ID: ${uniqueId}) in ${locationName}, Kenya, captured with ${lighting}, ${feature}. Include African-inspired decor like Maasai beadwork, Luo pottery, or natural surroundings like acacia trees or Lake Victoria to convey hospitality specific to ${locationName}.`;
+  }
+
+  // Enhanced fallback with Pexels and Pixabay, with relevance scoring
+  private async getFallbackImage(
+    category: string,
+    itemName: string,
+    itemDescription: string,
+    locationName: string,
+    index: number,
+    extraData?: any
+  ): Promise<string> {
+    const cleanName = itemName.toLowerCase();
+    const seed = parseInt(this.createConsistentSeed(`${category}-${itemName}-${index}-${locationName}-${extraData?.id || ''}`)) % 8;
+    let keywords = this.getCategoryKeywords(category, cleanName, itemDescription, locationName, extraData);
+
+    // Try Pexels first
+    if (this.pexelsApiKey) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const imageUrl = await this.fetchPexelsImage(keywords, seed + attempt);
+          if (imageUrl && !this.usedImageUrls.has(imageUrl)) {
+            return imageUrl;
+          }
+        } catch (error) {
+          console.warn(`⚠️ Pexels API error for ${category} - ${itemName}:`, error);
+        }
+        // Adjust keywords for retry
+        keywords = this.getAlternativeKeywords(keywords, locationName, category);
+      }
+    }
+
+    // Fallback to Pixabay
+    if (this.pixabayApiKey) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const imageUrl = await this.fetchPixabayImage(keywords, seed + attempt);
+          if (imageUrl && !this.usedImageUrls.has(imageUrl)) {
+            return imageUrl;
+          }
+        } catch (error) {
+          console.warn(`⚠️ Pixabay API error for ${category} - ${itemName}:`, error);
+        }
+        // Adjust keywords for retry
+        keywords = this.getAlternativeKeywords(keywords, locationName, category);
+      }
+    }
+
+    // Curated Kenyan-specific default images
+    const defaultImages = {
+      restaurant: [
+        "https://images.pexels.com/photos/1058277/pexels-photo-1058277.jpeg?auto=compress&cs=tinysrgb&w=400&h=300", // Kenyan tilapia dish
+        "https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?auto=compress&cs=tinysrgb&w=400&h=300", // Nyama choma
+        "https://images.pexels.com/photos/3186654/pexels-photo-3186654.jpeg?auto=compress&cs=tinysrgb&w=400&h=300", // Lakeside dining
+        "https://images.pexels.com/photos/262047/pexels-photo-262047.jpeg?auto=compress&cs=tinysrgb&w=400&h=300", // Outdoor Kenyan patio
+        "https://images.pexels.com/photos/941861/pexels-photo-941861.jpeg?auto=compress&cs=tinysrgb&w=400&h=300", // Cafe with mandazi
+        "https://images.pexels.com/photos/1410235/pexels-photo-1410235.jpeg?auto=compress&cs=tinysrgb&w=400&h=300", // Street food stall
+        "https://images.pexels.com/photos/1487511/pexels-photo-1487511.jpeg?auto=compress&cs=tinysrgb&w=400&h=300", // Fine dining with Kenyan decor
+        "https://images.pexels.com/photos/262978/pexels-photo-262978.jpeg?auto=compress&cs=tinysrgb&w=400&h=300" // Local cuisine
+      ],
+      attraction: [
+        "https://images.pexels.com/photos/1566837/pexels-photo-1566837.jpeg?auto=compress&cs=tinysrgb&w=400&h=300", // Lake with flamingos
+        "https://images.pexels.com/photos/2312904/pexels-photo-2312904.jpeg?auto=compress&cs=tinysrgb&w=400&h=300", // Cultural museum
+        "https://images.pexels.com/photos/1320686/pexels-photo-1320686.jpeg?auto=compress&cs=tinysrgb&w=400&h=300", // Savannah park
+        "https://images.pexels.com/photos/457882/pexels-photo-457882.jpeg?auto=compress&cs=tinysrgb&w=400&h=300", // Rift valley gorge
+        "https://images.pexels.com/photos/753639/pexels-photo-753639.jpeg?auto=compress&cs=tinysrgb&w=400&h=300", // Cultural market
+        "https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=400&h=300", // Lake Victoria view
+        "https://images.pexels.com/photos/1314550/pexels-photo-1314550.jpeg?auto=compress&cs=tinysrgb&w=400&h=300", // Wildlife sanctuary
+        "https://images.pexels.com/photos/3601426/pexels-photo-3601426.jpeg?auto=compress&cs=tinysrgb&w=400&h=300" // Maasai cultural site
+      ],
+      accommodation: [
+        "https://images.pexels.com/photos/271624/pexels-photo-271624.jpeg?auto=compress&cs=tinysrgb&w=400&h=300", // Lakeside lodge
+        "https://images.pexels.com/photos/1579253/pexels-photo-1579253.jpeg?auto=compress&cs=tinysrgb&w=400&h=300", // Modern Kenyan hotel
+        "https://images.pexels.com/photos/261169/pexels-photo-261169.jpeg?auto=compress&cs=tinysrgb&w=400&h=300", // Luxury resort
+        "https://images.pexels.com/photos/261388/pexels-photo-261388.jpeg?auto=compress&cs=tinysrgb&w=400&h=300", // Boutique hotel
+        "https://images.pexels.com/photos/297697/pexels-photo-297697.jpeg?auto=compress&cs=tinysrgb&w=400&h=300", // Tented camp
+        "https://images.pexels.com/photos/271618/pexels-photo-271618.jpeg?auto=compress&cs=tinysrgb&w=400&h=300", // Luxury suite with Kenyan decor
+        "https://images.pexels.com/photos/338504/pexels-photo-338504.jpeg?auto=compress&cs=tinysrgb&w=400&h=300", // Eco-lodge
+        "https://images.pexels.com/photos/97083/pexels-photo-97083.jpeg?auto=compress&cs=tinysrgb&w=400&h=300" // Lakeside cabin
+      ],
+      default: [
+        "https://images.pexels.com/photos/346529/pexels-photo-346529.jpeg?auto=compress&cs=tinysrgb&w=400&h=300" // Generic Kenyan travel
+      ]
+    };
+
+    const images = defaultImages[category] || defaultImages.default;
+    if (category === "restaurant") {
+      if (cleanName.includes("fish") || cleanName.includes("tilapia") || cleanName.includes("dunga")) return images[0];
+      if (cleanName.includes("grill") || cleanName.includes("nyama")) return images[1];
+      if (cleanName.includes("cafe") || cleanName.includes("coffee")) return images[4];
+      if (cleanName.includes("outdoor") || cleanName.includes("terrace") || extraData?.diningStyle?.includes("lakeside")) return images[3];
+    } else if (category === "attraction") {
+      if (cleanName.includes("lake") || cleanName.includes("naivasha") || cleanName.includes("victoria")) return images[0];
+      if (cleanName.includes("museum") || cleanName.includes("cultural")) return images[1];
+      if (cleanName.includes("gorge") || cleanName.includes("rock") || cleanName.includes("hells gate")) return images[3];
+      if (cleanName.includes("park") || cleanName.includes("sanctuary")) return images[2];
+    } else if (category === "accommodation") {
+      if (cleanName.includes("lodge") || cleanName.includes("camp") || cleanName.includes("fisherman")) return images[0];
+      if (cleanName.includes("resort")) return images[2];
+      if (cleanName.includes("boutique")) return images[3];
+      if (cleanName.includes("hotel")) return images[1];
+    }
+    return images[seed % images.length];
+  }
+
+  // Fetch image from Pexels with relevance scoring
+  private async fetchPexelsImage(keywords: string[], seed: number): Promise<string> {
+    const query = keywords.join(" ");
+    try {
+      const response = await axios.get(PEXELS_BASE_URL, {
+        headers: { Authorization: this.pexelsApiKey },
+        params: { query, per_page: 15, page: (seed % 5) + 1 }
+      });
+      const photos = response.data.photos;
+      if (photos && photos.length > 0) {
+        // Score images by keyword relevance
+        const scoredPhotos = photos.map((photo: any, index: number) => ({
+          url: photo.src.medium,
+          score: this.scoreImageRelevance(photo, keywords, index, seed)
+        }));
+        scoredPhotos.sort((a: any, b: any) => b.score - a.score);
+        return scoredPhotos[0].url;
+      }
+      throw new Error("No photos found");
+    } catch (error) {
+      console.error(`Pexels API error for query "${query}":`, error);
+      throw error;
+    }
+  }
+
+  // Fetch image from Pixabay with relevance scoring
+  private async fetchPixabayImage(keywords: string[], seed: number): Promise<string> {
+    const query = keywords.join("+");
+    try {
+      const response = await axios.get(PIXABAY_BASE_URL, {
+        params: { key: this.pixabayApiKey, q: query, per_page: 20, page: (seed % 5) + 1 }
+      });
+      const hits = response.data.hits;
+      if (hits && hits.length > 0) {
+        // Score images by keyword relevance
+        const scoredHits = hits.map((hit: any, index: number) => ({
+          url: hit.webformatURL,
+          score: this.scoreImageRelevance(hit, keywords, index, seed)
+        }));
+        scoredHits.sort((a: any, b: any) => b.score - a.score);
+        return scoredHits[0].url;
+      }
+      throw new Error("No photos found");
+    } catch (error) {
+      console.error(`Pixabay API error for query "${query}":`, error);
+      throw error;
+    }
+  }
+
+  // Score image relevance based on keywords and metadata
+  private scoreImageRelevance(image: any, keywords: string[], index: number, seed: number): number {
+    let score = 0;
+    const lowerKeywords = keywords.map(k => k.toLowerCase());
+    
+    // Check image metadata (Pexels: photographer, Pixabay: tags)
+    const metadata = image.photographer?.toLowerCase() || image.tags?.join(" ").toLowerCase() || "";
+    lowerKeywords.forEach(keyword => {
+      if (metadata.includes(keyword)) {
+        score += keyword.includes("kenya") || keyword.includes("nairobi") || keyword.includes("naivasha") || keyword.includes("kisumu") ? 30 : 10;
+      }
+    });
+
+    // Prioritize images with "kenya" or location-specific tags
+    if (metadata.includes("kenya")) score += 20;
+    if (metadata.includes("africa")) score += 10;
+
+    // Adjust score based on seed to maintain some randomness
+    score += (seed % 5) - (index * 2);
+    return score;
+  }
+
+  // Generate category-specific keywords with location prioritization
+  private getCategoryKeywords(
+    category: string,
+    itemName: string,
+    itemDescription: string,
+    locationName: string,
+    extraData?: any
+  ): string[] {
+    const cleanLocation = locationName.toLowerCase();
+    const locationKeywords = this.locationKeywordMap[cleanLocation]?.[category] || [];
+    let specificKeywords: string[] = [];
+
+    switch (category) {
+      case "restaurant":
+        const cuisineStyle = extraData?.cuisineStyle || this.extractCuisineType(itemDescription);
+        const signatureDish = extraData?.signatureDish || this.extractSignatureDish(itemDescription);
+        specificKeywords = [signatureDish, cuisineStyle, ...locationKeywords];
+        break;
+      case "attraction":
+        const attractionType = extraData?.attractionType || this.extractAttractionType(itemName, itemDescription);
+        const mainFeature = extraData?.mainFeature || this.extractMainFeature(itemDescription);
+        specificKeywords = [mainFeature, attractionType, ...locationKeywords];
+        break;
+      case "accommodation":
+        const accommodationType = extraData?.accommodationType || this.extractAccommodationType(itemName, itemDescription);
+        const uniqueFeature = extraData?.uniqueFeature || this.extractUniqueFeature(itemDescription);
+        specificKeywords = [uniqueFeature, accommodationType, ...locationKeywords];
+        break;
+      default:
+        specificKeywords = [...locationKeywords, "travel"];
+    }
+
+    // Prioritize specific keywords, then location, then generic
+    return [...new Set([...specificKeywords, cleanLocation, "kenya", category])].filter(k => k);
+  }
+
+  // Generate alternative keywords for retry
+  private getAlternativeKeywords(keywords: string[], locationName: string, category: string): string[] {
+    const cleanLocation = locationName.toLowerCase();
+    const locationKeywords = this.locationKeywordMap[cleanLocation]?.[category] || [];
+    const fallbackKeywords = {
+      restaurant: ['kenyan food', 'local cuisine', 'dining'],
+      attraction: ['tourism', 'landmark', 'culture'],
+      accommodation: ['hotel', 'lodge', 'stay']
+    };
+    return [...new Set([...locationKeywords, ...fallbackKeywords[category], cleanLocation, "kenya"])].filter(k => !keywords.includes(k));
+  }
+
+  // Helper methods for extracting details
+  private extractCuisineType(description: string): string {
+    const cuisineKeywords = {
+      'kenyan': ['kenyan', 'african', 'local', 'traditional', 'ugali', 'nyama choma', 'tilapia', 'githeri', 'mukimo', 'kuku choma'],
+      'seafood': ['seafood', 'fish', 'tilapia', 'prawns', 'marine'],
+      'italian': ['italian', 'pizza', 'pasta', 'risotto'],
+      'indian': ['indian', 'curry', 'tandoori', 'biryani', 'naan'],
+      'cafe': ['cafe', 'coffee', 'bistro', 'breakfast', 'mandazi']
+    };
+
+    for (const [cuisine, keywords] of Object.entries(cuisineKeywords)) {
+      if (keywords.some(keyword => description.toLowerCase().includes(keyword))) {
+        return cuisine;
+      }
+    }
+    return 'kenyan';
+  }
+
+  private extractSignatureDish(description: string): string {
+    const dishes = ['tilapia', 'nyama choma', 'ugali', 'sukuma wiki', 'chapati', 'githeri', 'mukimo', 'kuku choma', 'pizza', 'pasta', 'curry', 'samosa', 'mandazi'];
+    const found = dishes.find(dish => description.toLowerCase().includes(dish));
+    return found || 'tilapia';
+  }
+
+  private extractDiningStyle(description: string): string {
+    if (description.includes('lakeside') || description.includes('water') || description.includes('lake')) return 'lakeside dining';
+    if (description.includes('rooftop')) return 'rooftop dining';
+    if (description.includes('outdoor') || description.includes('garden') || description.includes('patio')) return 'outdoor dining';
+    if (description.includes('cozy') || description.includes('intimate')) return 'cozy indoor dining';
+    return 'lakeside dining';
+  }
+
+  private extractAttractionType(name: string, description: string): string {
+    const combined = `${name} ${description}`.toLowerCase();
+    
+    if (combined.includes('lake') || combined.includes('victoria') || combined.includes('naivasha')) return 'natural lake';
+    if (combined.includes('museum')) return 'museum';
+    if (combined.includes('market')) return 'market';
+    if (combined.includes('park') || combined.includes('sanctuary')) return 'nature park';
+    if (combined.includes('gorge') || combined.includes('rock') || combined.includes('hells gate')) return 'geological formation';
+    if (combined.includes('cultural') || combined.includes('luo') || combined.includes('maasai')) return 'cultural site';
+    return 'natural lake';
+  }
+
+  private extractMainFeature(description: string): string {
+    const features = ['flamingo', 'wildlife', 'artifacts', 'panoramic view', 'rock formation', 'cultural display', 'hippos', 'beadwork', 'fishing boats'];
+    const found = features.find(feature => description.toLowerCase().includes(feature.split(' ')[0]));
+    return found || 'wildlife';
+  }
+
+  private extractSetting(description: string): string {
+    if (description.includes('rift valley') || description.includes('hells gate')) return 'rift valley setting';
+    if (description.includes('colonial')) return 'colonial architecture';
+    if (description.includes('lakefront') || description.includes('lake')) return 'lakefront location';
+    return 'lakefront location';
+  }
+
+  private extractAccommodationType(name: string, description: string): string {
+    const combined = `${name} ${description}`.toLowerCase();
+    
+    if (combined.includes('lodge')) return 'lodge';
+    if (combined.includes('resort')) return 'resort';
+    if (combined.includes('camp')) return 'camp';
+    if (combined.includes('hotel')) return 'hotel';
+    return 'lodge';
+  }
+
+  private extractArchitecture(description: string): string {
+    if (description.includes('traditional') || description.includes('african') || description.includes('luo') || description.includes('maasai')) return 'traditional African architecture';
+    if (description.includes('colonial')) return 'colonial style architecture';
+    if (description.includes('modern')) return 'modern architecture';
+    return 'traditional African architecture';
+  }
+
+  private extractUniqueFeature(description: string): string {
+    if (description.includes('pool')) return 'swimming pool';
+    if (description.includes('lake') || description.includes('waterfront')) return 'lake access';
+    if (description.includes('garden')) return 'garden setting';
+    if (description.includes('balcon')) return 'private balconies';
+    return 'lake access';
+  }
+
+  // Utility methods
+  private createConsistentSeed(key: string): string {
     let hash = 0;
-    for (let i = 0; i < itemName.length; i++) {
-      const char = itemName.charCodeAt(i);
+    for (let i = 0; i < key.length; i++) {
+      const char = key.charCodeAt(i);
       hash = (hash << 5) - hash + char;
-      hash = hash & hash; // Convert to 32-bit integer
+      hash = hash & hash;
     }
     return Math.abs(hash).toString();
   }
 
-  // Get curated category-specific images based on recommendation content
-  private getCuratedCategoryImage(category: string, itemName: string, seed: string): string {
-    const cleanName = itemName.toLowerCase();
-    
-    switch (category) {
-      case 'restaurant':
-        return this.getRestaurantImage(cleanName, seed);
-      case 'attraction':
-        return this.getAttractionImage(cleanName, seed);
-      case 'accommodation':
-        return this.getAccommodationImage(cleanName, seed);
-      default:
-        return `https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=300&h=200&fit=crop&crop=center&auto=format&q=80`;
-    }
-  }
-
-  // Get restaurant-specific images based on cuisine type or restaurant name
-  private getRestaurantImage(name: string, seed: string): string {
-    // Pizza restaurants
-    if (name.includes('pizza')) {
-      const pizzaImages = [
-        'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?w=300&h=200&fit=crop&crop=center&auto=format&q=80'
-      ];
-      return pizzaImages[parseInt(seed) % pizzaImages.length];
-    }
-    
-    // Sushi restaurants
-    if (name.includes('sushi') || name.includes('japanese')) {
-      const sushiImages = [
-        'https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1617196034796-73dfa7b1fd56?w=300&h=200&fit=crop&crop=center&auto=format&q=80'
-      ];
-      return sushiImages[parseInt(seed) % sushiImages.length];
-    }
-    
-    // Burger restaurants
-    if (name.includes('burger')) {
-      const burgerImages = [
-        'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1550547660-d9450f859349?w=300&h=200&fit=crop&crop=center&auto=format&q=80'
-      ];
-      return burgerImages[parseInt(seed) % burgerImages.length];
-    }
-    
-    // Coffee/Cafe
-    if (name.includes('coffee') || name.includes('cafe')) {
-      const coffeeImages = [
-        'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1559496417-e7f25cb247f3?w=300&h=200&fit=crop&crop=center&auto=format&q=80'
-      ];
-      return coffeeImages[parseInt(seed) % coffeeImages.length];
-    }
-    
-    // Italian restaurants
-    if (name.includes('italian') || name.includes('pasta')) {
-      const italianImages = [
-        'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1621996346565-e3dbc353d2e5?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1572441713132-51c75654db73?w=300&h=200&fit=crop&crop=center&auto=format&q=80'
-      ];
-      return italianImages[parseInt(seed) % italianImages.length];
-    }
-    
-    // Default restaurant images
-    const defaultRestaurantImages = [
-      'https://images.unsplash.com/photo-1600891964092-4316c288032e?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-      'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-      'https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=300&h=200&fit=crop&crop=center&auto=format&q=80'
-    ];
-    return defaultRestaurantImages[parseInt(seed) % defaultRestaurantImages.length];
-  }
-
-  // Get attraction-specific images based on attraction type
-  private getAttractionImage(name: string, seed: string): string {
-    // Museums
-    if (name.includes('museum')) {
-      const museumImages = [
-        'https://images.unsplash.com/photo-1539650116574-75c0c6d73c6e?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1541963463532-d68292c34d19?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=200&fit=crop&crop=center&auto=format&q=80'
-      ];
-      return museumImages[parseInt(seed) % museumImages.length];
-    }
-    
-    // Parks and nature
-    if (name.includes('park') || name.includes('garden')) {
-      const parkImages = [
-        'https://images.unsplash.com/photo-1518684079-3c830dcef090?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=300&h=200&fit=crop&crop=center&auto=format&q=80'
-      ];
-      return parkImages[parseInt(seed) % parkImages.length];
-    }
-    
-    // Beaches
-    if (name.includes('beach')) {
-      const beachImages = [
-        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=300&h=200&fit=crop&crop=center&auto=format&q=80'
-      ];
-      return beachImages[parseInt(seed) % beachImages.length];
-    }
-    
-    // Churches/Cathedrals
-    if (name.includes('church') || name.includes('cathedral') || name.includes('temple')) {
-      const churchImages = [
-        'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1520637836862-4d197d17c90a?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1548013146-72479768bada?w=300&h=200&fit=crop&crop=center&auto=format&q=80'
-      ];
-      return churchImages[parseInt(seed) % churchImages.length];
-    }
-    
-    // Default attraction images
-    const defaultAttractionImages = [
-      'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-      'https://images.unsplash.com/photo-1581833971358-2c8b550f87b3?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-      'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=300&h=200&fit=crop&crop=center&auto=format&q=80'
-    ];
-    return defaultAttractionImages[parseInt(seed) % defaultAttractionImages.length];
-  }
-
-  // Get accommodation-specific images based on hotel type
-  private getAccommodationImage(name: string, seed: string): string {
-    // Luxury hotels
-    if (name.includes('luxury') || name.includes('grand')) {
-      const luxuryImages = [
-        'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=300&h=200&fit=crop&crop=center&auto=format&q=80'
-      ];
-      return luxuryImages[parseInt(seed) % luxuryImages.length];
-    }
-    
-    // Boutique hotels
-    if (name.includes('boutique')) {
-      const boutiqueImages = [
-        'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=300&h=200&fit=crop&crop=center&auto=format&q=80'
-      ];
-      return boutiqueImages[parseInt(seed) % boutiqueImages.length];
-    }
-    
-    // Resorts
-    if (name.includes('resort')) {
-      const resortImages = [
-        'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=300&h=200&fit=crop&crop=center&auto=format&q=80'
-      ];
-      return resortImages[parseInt(seed) % resortImages.length];
-    }
-    
-    // Lodge/Safari
-    if (name.includes('lodge') || name.includes('safari')) {
-      const lodgeImages = [
-        'https://images.unsplash.com/photo-1520637836862-4d197d17c90a?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-        'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=200&fit=crop&crop=center&auto=format&q=80'
-      ];
-      return lodgeImages[parseInt(seed) % lodgeImages.length];
-    }
-    
-    // Default hotel images
-    const defaultHotelImages = [
-      'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-      'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=300&h=200&fit=crop&crop=center&auto=format&q=80',
-      'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=300&h=200&fit=crop&crop=center&auto=format&q=80'
-    ];
-    return defaultHotelImages[parseInt(seed) % defaultHotelImages.length];
-  }
-
-  // Remove duplicate recommendations based on name similarity
-  private removeDuplicates(
-    items: OpenAIRecommendation[]
-  ): OpenAIRecommendation[] {
+  private removeDuplicates(items: OpenAIRecommendation[]): OpenAIRecommendation[] {
     const seen = new Set();
     return items.filter((item) => {
       const key = item.name.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -664,38 +730,38 @@ Please provide 3-4 recommendations for each category. Focus on popular, well-rev
     });
   }
 
-  // Mock recommendations fallback
-  private getMockRecommendations(
-    locationName: string
-  ): RecommendationsResponse {
+  // Mock data methods
+  private getMockRecommendations(locationName: string): RecommendationsResponse {
     const mockRestaurants: OpenAIRecommendation[] = [
       {
         id: `${locationName}-rest-1`,
         name: `${locationName} Bistro`,
-        description: `Popular local restaurant serving authentic cuisine in ${locationName}`,
+        description: `Popular local restaurant serving authentic Kenyan cuisine with tilapia and ugali in ${locationName}`,
         type: "restaurant",
         rating: 4.5,
         priceLevel: 2,
         address: `Main Street, ${locationName}`,
-        imageUrl: `https://picsum.photos/300/200?random=${encodeURIComponent(
-          locationName
-        )}-restaurant-1`,
-        tags: ["local cuisine", "popular", "family-friendly"],
+        imageUrl: this.getFallbackImage("restaurant", `${locationName} Bistro`, `Popular local restaurant serving authentic Kenyan cuisine`, locationName, 1, { cuisineStyle: "Kenyan seafood", signatureDish: "grilled tilapia", diningStyle: "lakeside dining" }),
+        tags: ["kenyan cuisine", "popular", "family-friendly", "tilapia"],
         openingHours: "9:00 AM - 10:00 PM",
+        cuisineStyle: "Kenyan seafood",
+        signatureDish: "grilled tilapia",
+        diningStyle: "lakeside dining"
       },
       {
         id: `${locationName}-rest-2`,
         name: `Cafe ${locationName}`,
-        description: `Cozy cafe with great coffee and light meals in ${locationName}`,
+        description: `Cozy cafe with artisanal coffee and mandazi in ${locationName}`,
         type: "restaurant",
         rating: 4.2,
         priceLevel: 1,
         address: `Central Plaza, ${locationName}`,
-        imageUrl: `https://picsum.photos/300/200?random=${encodeURIComponent(
-          locationName
-        )}-restaurant-2`,
+        imageUrl: this.getFallbackImage("restaurant", `Cafe ${locationName}`, `Cozy cafe with artisanal coffee`, locationName, 2, { cuisineStyle: "cafe", signatureDish: "mandazi", diningStyle: "cozy indoor dining" }),
         tags: ["cafe", "coffee", "breakfast"],
         openingHours: "7:00 AM - 6:00 PM",
+        cuisineStyle: "cafe",
+        signatureDish: "mandazi",
+        diningStyle: "cozy indoor dining"
       },
     ];
 
@@ -703,28 +769,30 @@ Please provide 3-4 recommendations for each category. Focus on popular, well-rev
       {
         id: `${locationName}-attr-1`,
         name: `${locationName} Museum`,
-        description: `Learn about the rich history and culture of ${locationName}`,
+        description: `Learn about the rich history and culture of ${locationName} with traditional Luo artifacts`,
         type: "attraction",
         rating: 4.7,
         address: `Museum District, ${locationName}`,
-        imageUrl: `https://picsum.photos/300/200?random=${encodeURIComponent(
-          locationName
-        )}-attraction-1`,
+        imageUrl: this.getFallbackImage("attraction", `${locationName} Museum`, `Rich history and culture with artifacts`, locationName, 1, { attractionType: "museum", mainFeature: "traditional artifacts", setting: "colonial architecture" }),
         tags: ["museum", "history", "culture"],
         openingHours: "9:00 AM - 5:00 PM",
+        attractionType: "historical museum",
+        mainFeature: "traditional artifacts",
+        setting: "colonial architecture"
       },
       {
         id: `${locationName}-attr-2`,
         name: `${locationName} Park`,
-        description: `Beautiful natural park perfect for relaxation and outdoor activities`,
+        description: `Beautiful natural park perfect for relaxation and wildlife viewing`,
         type: "attraction",
         rating: 4.4,
         address: `Park Avenue, ${locationName}`,
-        imageUrl: `https://picsum.photos/300/200?random=${encodeURIComponent(
-          locationName
-        )}-attraction-2`,
+        imageUrl: this.getFallbackImage("attraction", `${locationName} Park`, `Natural park for relaxation`, locationName, 2, { attractionType: "nature park", mainFeature: "wildlife viewing", setting: "natural setting" }),
         tags: ["nature", "outdoor", "family"],
         openingHours: "6:00 AM - 8:00 PM",
+        attractionType: "nature park",
+        mainFeature: "wildlife viewing",
+        setting: "natural setting"
       },
     ];
 
@@ -732,16 +800,17 @@ Please provide 3-4 recommendations for each category. Focus on popular, well-rev
       {
         id: `${locationName}-hotel-1`,
         name: `${locationName} Grand Hotel`,
-        description: `Luxury hotel with excellent amenities in the heart of ${locationName}`,
+        description: `Luxury hotel with modern amenities and lake views in ${locationName}`,
         type: "accommodation",
         rating: 4.6,
         priceLevel: 3,
         address: `Downtown, ${locationName}`,
-        imageUrl: `https://picsum.photos/300/200?random=${encodeURIComponent(
-          locationName
-        )}-hotel-1`,
-        tags: ["luxury", "downtown", "business"],
+        imageUrl: this.getFallbackImage("accommodation", `${locationName} Grand Hotel`, `Luxury hotel with lake views`, locationName, 1, { accommodationType: "hotel", uniqueFeature: "infinity pool", architecture: "modern architecture" }),
+        tags: ["luxury", "downtown", "lake-view"],
         website: "https://example.com",
+        accommodationType: "hotel",
+        architecture: "modern architecture",
+        uniqueFeature: "infinity pool"
       },
     ];
 
@@ -752,7 +821,6 @@ Please provide 3-4 recommendations for each category. Focus on popular, well-rev
     };
   }
 
-  // Mock recommendations for multiple stops
   private getMockRecommendationsForTrip(
     stops: Array<{ name: string }>
   ): RecommendationsResponse {
@@ -765,7 +833,7 @@ Please provide 3-4 recommendations for each category. Focus on popular, well-rev
     };
   }
 
-  // Fetch weather forecasts for trip stops using OpenAI
+  // Weather-related methods
   async getWeatherForecastForTrip(
     stops: Array<{
       id: string;
@@ -808,7 +876,7 @@ Please provide 3-4 recommendations for each category. Focus on popular, well-rev
             },
           ],
           max_tokens: 1500,
-          temperature: 0.3, // Lower temperature for more consistent weather data
+          temperature: 0.3,
         }),
       });
 
@@ -825,19 +893,16 @@ Please provide 3-4 recommendations for each category. Focus on popular, well-rev
         throw new Error("No weather content received from OpenAI");
       }
 
-      // Parse the JSON response
       const weatherData = JSON.parse(content);
 
       console.log(`✅ OpenAI weather forecasts fetched for trip:`, weatherData);
       return weatherData;
     } catch (error) {
       console.error(`❌ OpenAI weather API error:`, error);
-      // Fallback to mock data
       return this.getMockWeatherForTrip(stops, startDate, endDate);
     }
   }
 
-  // Build the weather prompt for OpenAI
   private buildWeatherPrompt(
     stops: Array<{ name: string; lat?: number; lng?: number }>,
     startDate?: Date,
@@ -893,7 +958,6 @@ Make sure all JSON is valid and properly formatted.
     `.trim();
   }
 
-  // Mock weather data fallback
   private getMockWeatherForTrip(
     stops: Array<{ name: string; lat?: number; lng?: number }>,
     startDate?: Date,
@@ -961,6 +1025,147 @@ Make sure all JSON is valid and properly formatted.
       averageTemp: Math.round(averageTemp),
       dominantCondition,
     };
+  }
+
+  async getRecommendationsForLocation(
+    locationName: string,
+    lat?: number,
+    lng?: number
+  ): Promise<RecommendationsResponse> {
+    if (!this.apiKey) {
+      console.warn("OpenAI API key not available, returning mock data");
+      return this.getMockRecommendations(locationName);
+    }
+
+    try {
+      console.log(`🤖 Fetching OpenAI recommendations for: ${locationName}`);
+
+      const prompt = this.buildRecommendationPrompt(locationName, lat, lng);
+
+      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-3.5-turbo",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are a travel expert providing detailed recommendations for travelers. Always respond with valid JSON format and include specific details about cuisine types, architectural styles, and unique features.",
+            },
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+          max_tokens: 2000,
+          temperature: 0.7,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `OpenAI API error: ${response.status} ${response.statusText}`
+        );
+      }
+
+      const data = await response.json();
+      const content = data.choices[0]?.message?.content;
+
+      if (!content) {
+        throw new Error("No content received from OpenAI");
+      }
+
+      const recommendations = JSON.parse(content);
+      const processedRecommendations = await this.addImageUrls(
+        recommendations,
+        locationName
+      );
+
+      console.log(
+        `✅ OpenAI recommendations fetched for ${locationName}:`,
+        processedRecommendations
+      );
+      return processedRecommendations;
+    } catch (error) {
+      console.error(`❌ OpenAI API error for ${locationName}:`, error);
+      return this.getMockRecommendations(locationName);
+    }
+  }
+
+  async getRecommendationsForTrip(
+    stops: Array<{
+      id: string;
+      name: string;
+      lat?: number;
+      lng?: number;
+    }>
+  ): Promise<{
+    restaurants: OpenAIRecommendation[];
+    attractions: OpenAIRecommendation[];
+    accommodations: OpenAIRecommendation[];
+  }> {
+    console.log(`🗺️ Fetching recommendations for ${stops.length} stops`);
+
+    try {
+      const allRecommendations = await Promise.all(
+        stops.map((stop) =>
+          this.getRecommendationsForLocation(stop.name, stop.lat, stop.lng)
+        )
+      );
+
+      const combined = {
+        restaurants: [] as OpenAIRecommendation[],
+        attractions: [] as OpenAIRecommendation[],
+        accommodations: [] as OpenAIRecommendation[],
+      };
+
+      allRecommendations.forEach((rec, index) => {
+        const stopName = stops[index].name;
+
+        combined.restaurants.push(
+          ...rec.restaurants.map((r) => ({
+            ...r,
+            id: `${stopName}-${r.id}`,
+            tags: [...r.tags, `Near ${stopName}`],
+          }))
+        );
+
+        combined.attractions.push(
+          ...rec.attractions.map((a) => ({
+            ...a,
+            id: `${stopName}-${a.id}`,
+            tags: [...a.tags, `Near ${stopName}`],
+          }))
+        );
+
+        combined.accommodations.push(
+          ...rec.accommodations.map((h) => ({
+            ...h,
+            id: `${stopName}-${h.id}`,
+            tags: [...h.tags, `Near ${stopName}`],
+          }))
+        );
+      });
+
+      combined.restaurants = this.removeDuplicates(combined.restaurants).slice(0, 12);
+      combined.attractions = this.removeDuplicates(combined.attractions).slice(0, 12);
+      combined.accommodations = this.removeDuplicates(combined.accommodations).slice(0, 8);
+
+      console.log(`✅ Combined recommendations:`, {
+        restaurants: combined.restaurants.length,
+        attractions: combined.attractions.length,
+        accommodations: combined.accommodations.length,
+      });
+
+      return combined;
+    } catch (error) {
+      console.error("❌ Error fetching trip recommendations:", error);
+      return this.getMockRecommendationsForTrip(stops);
+    }
   }
 }
 
