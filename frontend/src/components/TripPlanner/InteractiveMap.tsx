@@ -95,7 +95,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
   const [zoom, setZoom] = useState(5);
   const [mapType, setMapType] = useState("streets-v11");
   const [mapCenter, setMapCenter] = useState({ lat: -1.2921, lng: 36.8219 }); // Center of Kenya (Nairobi)
-  const [isMapLoading, setIsMapLoading] = useState(true);
+  const [isMapLoading, setIsMapLoading] = useState(false);
   const [routePath, setRoutePath] = useState<Array<[number, number]>>([]);
   const [clickedMarkers, setClickedMarkers] = useState<
     Array<{
@@ -108,6 +108,15 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
   >([]);
   const [isTripModalOpen, setIsTripModalOpen] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
+
+  // Debug: Log component mount and props
+  useEffect(() => {
+    console.log("🗺️ InteractiveMap mounted/updated with:");
+    console.log("📍 Waypoints:", waypoints.length, waypoints);
+    console.log("🔍 Search results:", searchResults.length);
+    console.log("🎯 Focused location:", focusedLocation);
+    console.log("⚡ Loading state:", isMapLoading);
+  }, [waypoints, searchResults, focusedLocation, isMapLoading]);
 
   // Handle editing trip - open modal when editingTrip prop changes
   useEffect(() => {
@@ -138,9 +147,22 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
   useEffect(() => {
     if (focusedLocation) {
       // Focus on the clicked search result
+      console.log("🎯 Focusing on location:", focusedLocation.name);
+      console.log("📍 Setting map center to:", {
+        lat: focusedLocation.lat,
+        lng: focusedLocation.lng,
+      });
       setMapCenter({ lat: focusedLocation.lat, lng: focusedLocation.lng });
-      setZoom(15); // Zoom in closer for focused location
+      setZoom(12); // Use consistent zoom level with getMapUrl
       setIsMapLoading(true);
+
+      // Add timeout to prevent infinite loading
+      const loadingTimeout = setTimeout(() => {
+        console.log("⏰ Map loading timeout - clearing loading state");
+        setIsMapLoading(false);
+      }, 5000); // 5 second timeout
+
+      return () => clearTimeout(loadingTimeout);
     } else if (searchResults.length > 0) {
       // Center map on first search result
       const firstResult = searchResults[0];
@@ -183,6 +205,14 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
         setZoom(9);
       }
       setIsMapLoading(true);
+
+      // Add timeout to prevent infinite loading for waypoints
+      const waypointTimeout = setTimeout(() => {
+        console.log("⏰ Waypoint map loading timeout - clearing loading state");
+        setIsMapLoading(false);
+      }, 5000); // 5 second timeout
+
+      return () => clearTimeout(waypointTimeout);
     }
   }, [focusedLocation, searchResults, waypoints]);
 
@@ -368,9 +398,15 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
       let zoomLevel = validZoom;
 
       if (focusedLocation) {
-        // Center on focused location
+        // Center on focused location - use simple approach
         center = [focusedLocation.lng, focusedLocation.lat];
         zoomLevel = 12;
+        console.log(
+          "🎯 Using focused location for map center:",
+          center,
+          "zoom:",
+          zoomLevel
+        );
       } else if (waypoints.length > 0) {
         // Center on trip stops
         const validWaypoints = waypoints.filter(
@@ -579,20 +615,46 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             className="w-full h-full object-cover pointer-events-none"
             onLoad={() => {
               console.log("✅ Map image loaded successfully");
+              console.log("🎯 Focused location:", focusedLocation);
+              console.log("📍 Map center:", mapCenter);
+              console.log("🔍 Zoom:", zoom);
               setIsMapLoading(false);
             }}
             onError={(e) => {
               console.error("❌ Map image failed to load");
+              console.error("🎯 Focused location:", focusedLocation);
+              console.error("📍 Map center:", mapCenter);
+              console.error("🔍 Zoom:", zoom);
               console.error("Failed URL:", getMapUrl());
-              setIsMapLoading(false);
-              // Show fallback immediately
-              e.currentTarget.style.display = "none";
-              const fallback = e.currentTarget
-                .nextElementSibling as HTMLElement;
-              if (fallback) {
-                fallback.style.display = "flex";
-                console.log("📍 Showing fallback map with trip stops");
-              }
+
+              // Try to load a simpler fallback URL
+              const fallbackUrl = mapboxService.getSimpleMapUrl({
+                center: [mapCenter.lng, mapCenter.lat],
+                zoom: Math.max(1, Math.min(zoom, 15)),
+                width: 600,
+                height: 400,
+                style: "streets-v11",
+              });
+
+              console.log("🔄 Trying fallback URL:", fallbackUrl);
+              e.currentTarget.src = fallbackUrl;
+
+              // If fallback also fails, show the placeholder
+              setTimeout(() => {
+                if (
+                  e.currentTarget.complete &&
+                  e.currentTarget.naturalHeight === 0
+                ) {
+                  console.log("🚫 Fallback also failed, showing placeholder");
+                  setIsMapLoading(false);
+                  e.currentTarget.style.display = "none";
+                  const fallback = e.currentTarget
+                    .nextElementSibling as HTMLElement;
+                  if (fallback) {
+                    fallback.style.display = "flex";
+                  }
+                }
+              }, 2000);
             }}
           />
 
@@ -785,36 +847,8 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
                       className="text-xs p-2 hover:bg-accent rounded cursor-pointer transition-colors"
                       onClick={() => {
                         console.log("🔍 Search result clicked:", result.name);
-                        console.log(
-                          "📍 Adding to clicked markers for trip creation"
-                        );
 
-                        // Add to clicked markers for trip creation
-                        const newMarker = {
-                          id: `search-${result.id}`,
-                          name: result.name,
-                          lat: result.lat,
-                          lng: result.lng,
-                          type: "stop" as const,
-                        };
-
-                        setClickedMarkers((prev) => {
-                          const updated = [...prev, newMarker];
-                          console.log(
-                            "📍 Total markers for trip:",
-                            updated.length
-                          );
-                          return updated;
-                        });
-
-                        // Focus on the result
-                        setFocusedLocation({
-                          lat: result.lat,
-                          lng: result.lng,
-                          name: result.name,
-                        });
-
-                        // Call parent callback
+                        // Call parent callback to handle the focus
                         onSearchResultClick(result);
                       }}
                     >

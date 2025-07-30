@@ -68,15 +68,59 @@ export const useTripStore = () => {
       setStore((prev) => ({
         ...prev,
         allTrips: tripsWithStops,
-        currentTrip: tripsWithStops.length > 0 ? tripsWithStops[0] : null, // Set first trip as current
         isLoading: false,
       }));
+
+      // Auto-select and load details for the first trip
+      if (tripsWithStops.length > 0) {
+        console.log("Auto-selecting first trip:", tripsWithStops[0].name);
+        await loadTripDetails(tripsWithStops[0].id);
+      }
     } catch (error: any) {
       setStore((prev) => ({
         ...prev,
         error: error.message || "Failed to load trips",
         isLoading: false,
       }));
+    }
+  }, []);
+
+  // Load detailed trip information including stops
+  const loadTripDetails = useCallback(async (tripId: number) => {
+    try {
+      console.log("Loading trip details for ID:", tripId);
+      const tripDetails = await apiService.getTripDetails(tripId);
+      
+      // Transform the detailed trip data
+      const detailedTrip = {
+        ...tripDetails,
+        stops: tripDetails.stops || [],
+        // Legacy properties for backward compatibility
+        routeType: tripDetails.route_type,
+        totalDistance: tripDetails.total_distance,
+        totalTime: tripDetails.total_time,
+        estimatedFuelCost: tripDetails.estimated_fuel_cost,
+        startDate: tripDetails.start_date ? new Date(tripDetails.start_date) : undefined,
+        endDate: tripDetails.end_date ? new Date(tripDetails.end_date) : undefined,
+        createdAt: new Date(tripDetails.created_at),
+        updatedAt: new Date(tripDetails.updated_at),
+        stopsCount: tripDetails.stops_count,
+      };
+
+      setStore((prev) => ({
+        ...prev,
+        currentTrip: detailedTrip,
+      }));
+
+      console.log("Trip details loaded successfully:", detailedTrip.name, "with", detailedTrip.stops?.length || 0, "stops");
+      return detailedTrip;
+    } catch (error: any) {
+      console.error("Failed to load trip details:", error);
+      setStore((prev) => ({
+        ...prev,
+        error: error.message || "Failed to load trip details",
+      }));
+      throw error;
     }
   }, []);
 
@@ -550,6 +594,7 @@ export const useTripStore = () => {
   return {
     ...store,
     loadTrips,
+    loadTripDetails,
     createTrip,
     updateTrip,
     deleteTrip,
