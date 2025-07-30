@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,110 +13,32 @@ import {
   Bed,
   Loader2,
   Navigation,
+  Phone,
+  Globe,
+  Plus,
 } from "lucide-react";
-import { mapboxService } from "@/services/mapbox";
 import { Recommendation } from "@/types/trip";
-import { toastService } from "@/services/toast";
 
 interface RecommendationsPanelProps {
-  selectedStops?: Array<{
-    id: string;
-    name: string;
-    lat: number;
-    lng: number;
-  }>;
+  recommendations?: {
+    restaurants: Recommendation[];
+    attractions: Recommendation[];
+    accommodations: Recommendation[];
+  };
+  isLoading?: boolean;
   onAddToTrip?: (recommendation: Recommendation) => void;
 }
 
 export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
-  selectedStops,
-  onAddToTrip,
-}) => {
-  const [recommendations, setRecommendations] = useState<{
-    restaurants: Recommendation[];
-    attractions: Recommendation[];
-    accommodations: Recommendation[];
-  }>({
+  recommendations = {
     restaurants: [],
     attractions: [],
     accommodations: [],
-  });
-  const [isLoading, setIsLoading] = useState(false);
+  },
+  isLoading = false,
+  onAddToTrip,
+}) => {
   const [activeTab, setActiveTab] = useState("restaurants");
-
-  // Fetch recommendations when stops change
-  useEffect(() => {
-    if (selectedStops && selectedStops.length > 0) {
-      fetchRecommendations();
-    } else {
-      setRecommendations({
-        restaurants: [],
-        attractions: [],
-        accommodations: [],
-      });
-    }
-  }, [selectedStops]);
-
-  const fetchRecommendations = async () => {
-    setIsLoading(true);
-    try {
-      // Get the center point of all selected stops
-      const centerLat =
-        selectedStops.reduce((sum, stop) => sum + stop.lat, 0) /
-        selectedStops.length;
-      const centerLng =
-        selectedStops.reduce((sum, stop) => sum + stop.lng, 0) /
-        selectedStops.length;
-
-      // Fetch recommendations for each type
-      const [restaurants, attractions, accommodations] = await Promise.all([
-        mapboxService.searchPOI(centerLat, centerLng, "restaurant", {
-          limit: 8,
-        }),
-        mapboxService.searchPOI(centerLat, centerLng, "attraction", {
-          limit: 8,
-        }),
-        mapboxService.searchPOI(centerLat, centerLng, "accommodation", {
-          limit: 8,
-        }),
-      ]);
-
-      // Convert to Recommendation format
-      const convertToRecommendation = (poi: any): Recommendation => ({
-        id: poi.id,
-        name: poi.name,
-        type: poi.type,
-        rating: poi.rating || 4.0,
-        distance: poi.distance,
-        duration: poi.duration,
-        description: poi.description,
-        imageUrl: poi.imageUrl,
-        tags: poi.tags,
-        lat: poi.lat,
-        lng: poi.lng,
-        priceLevel: poi.priceLevel,
-        openingHours: poi.openingHours,
-      });
-
-      setRecommendations({
-        restaurants: restaurants.map(convertToRecommendation),
-        attractions: attractions.map(convertToRecommendation),
-        accommodations: accommodations.map(convertToRecommendation),
-      });
-    } catch (error) {
-      console.error("Failed to fetch recommendations:", error);
-      toastService.api.recommendationsLoadFailed();
-      
-      // Set empty recommendations on error
-      setRecommendations({
-        restaurants: [],
-        attractions: [],
-        accommodations: [],
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
@@ -157,94 +79,120 @@ export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
   };
 
   const renderRecommendationCard = (recommendation: Recommendation) => (
-    <Card key={recommendation.id} className="mb-3">
-      <CardContent className="p-4">
-        <div className="flex gap-3">
+    <Card key={recommendation.id} className="mb-4 hover:shadow-lg transition-all duration-200 border-0 shadow-sm">
+      <CardContent className="p-0">
+        {/* Image */}
+        <div className="relative w-full h-32 overflow-hidden rounded-t-lg">
           <img
             src={recommendation.imageUrl}
             alt={recommendation.name}
-            className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+            className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
             onError={(e) => {
-              e.currentTarget.src = `https://via.placeholder.com/64x64?text=${encodeURIComponent(
-                recommendation.name.charAt(0)
-              )}`;
+              e.currentTarget.src = `https://picsum.photos/300/200?random=${recommendation.id}`;
             }}
           />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between mb-1">
-              <h4 className="font-semibold text-sm truncate">
-                {recommendation.name}
-              </h4>
-              <div className="flex items-center gap-1 ml-2">
-                {renderStars(recommendation.rating)}
-                <span className="text-xs text-muted-foreground ml-1">
-                  {recommendation.rating.toFixed(1)}
-                </span>
-              </div>
-            </div>
-
-            <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
-              {recommendation.description}
-            </p>
-
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Navigation className="h-3 w-3" />
-                  {recommendation.distance}
-                </div>
-                <div className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {recommendation.duration}
-                </div>
-              </div>
-              {recommendation.priceLevel && (
-                <div className="flex items-center">
-                  {renderPriceLevel(recommendation.priceLevel)}
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex flex-wrap gap-1">
-                {recommendation.tags.slice(0, 2).map((tag) => (
-                  <Badge
-                    key={tag}
-                    variant="secondary"
-                    className="text-xs px-1 py-0"
-                  >
-                    {tag}
-                  </Badge>
+          <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded-full text-xs flex items-center">
+            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 mr-1" />
+            {recommendation.rating?.toFixed(1) || "4.0"}
+          </div>
+        </div>
+        
+        {/* Content */}
+        <div className="p-4">
+          <div className="flex items-start justify-between mb-2">
+            <h3 className="font-semibold text-sm leading-tight pr-2">
+              {recommendation.name}
+            </h3>
+            {recommendation.priceLevel && (
+              <div className="flex text-green-600">
+                {Array.from({ length: recommendation.priceLevel }, (_, i) => (
+                  <DollarSign key={i} className="h-3 w-3" />
                 ))}
               </div>
-              {onAddToTrip && (
+            )}
+          </div>
+          
+          <p className="text-xs text-muted-foreground mb-3 line-clamp-2 leading-relaxed">
+            {recommendation.description}
+          </p>
+          
+          {/* Address */}
+          {recommendation.address && (
+            <div className="flex items-center text-xs text-muted-foreground mb-2">
+              <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
+              <span className="truncate">{recommendation.address}</span>
+            </div>
+          )}
+          
+          {/* Contact Info */}
+          <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
+            {recommendation.openingHours && (
+              <div className="flex items-center">
+                <Clock className="h-3 w-3 mr-1" />
+                <span>{recommendation.openingHours}</span>
+              </div>
+            )}
+            {recommendation.phone && (
+              <div className="flex items-center">
+                <Phone className="h-3 w-3 mr-1" />
+                <span>{recommendation.phone}</span>
+              </div>
+            )}
+          </div>
+          
+          {/* Tags */}
+          <div className="flex flex-wrap gap-1 mb-3">
+            {recommendation.tags?.slice(0, 3).map((tag) => (
+              <Badge key={tag} variant="secondary" className="text-xs px-2 py-0.5">
+                {tag}
+              </Badge>
+            ))}
+          </div>
+          
+          {/* Actions */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {recommendation.website && (
                 <Button
                   size="sm"
-                  variant="outline"
-                  className="h-6 text-xs px-2"
-                  onClick={() => onAddToTrip(recommendation)}
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => window.open(recommendation.website, '_blank')}
                 >
-                  Add
+                  <Globe className="h-3 w-3 mr-1" />
+                  Visit
                 </Button>
               )}
             </div>
+            <Button
+              size="sm"
+              className="h-7 px-3 text-xs"
+              onClick={() => onAddToTrip?.(recommendation)}
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Add to Trip
+            </Button>
           </div>
         </div>
       </CardContent>
     </Card>
   );
 
-  if (!selectedStops || selectedStops.length === 0) {
+  // Check if we have any recommendations
+  const hasRecommendations = recommendations.restaurants.length > 0 || 
+                            recommendations.attractions.length > 0 || 
+                            recommendations.accommodations.length > 0;
+
+  if (!hasRecommendations && !isLoading) {
     return (
       <div className="w-full h-full flex items-center justify-center">
         <div className="text-center">
           <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground">
-            Add stops to see recommendations
+            No recommendations available
           </p>
           <p className="text-sm text-muted-foreground mt-2">
-            Click on the map to add stops and discover nearby attractions,
-            restaurants, and places to stay
+            Select a trip with stops to see AI-powered recommendations for restaurants, attractions, and accommodations
           </p>
         </div>
       </div>
@@ -254,10 +202,9 @@ export const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({
   return (
     <div className="w-full h-full flex flex-col">
       <div className="p-4 border-b">
-        <h2 className="text-lg font-semibold mb-2">Recommendations</h2>
+        <h2 className="text-lg font-semibold mb-2">AI Recommendations</h2>
         <p className="text-sm text-muted-foreground">
-          Based on {selectedStops.length} selected stop
-          {selectedStops.length !== 1 ? "s" : ""}
+          Powered by OpenAI for your trip stops
         </p>
       </div>
 

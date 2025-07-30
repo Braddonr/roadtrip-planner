@@ -1,11 +1,17 @@
 import { useState, useCallback, useEffect } from "react";
 import { Trip, Stop, Recommendation, WeatherForecast } from "../types/trip";
 import { apiService } from "../services/api";
+import { openaiService, OpenAIRecommendation } from "../services/openai";
 
 interface TripStore {
   currentTrip: Trip | null;
   allTrips: Trip[];
   recommendations: Recommendation[];
+  categorizedRecommendations?: {
+    restaurants: Recommendation[];
+    attractions: Recommendation[];
+    accommodations: Recommendation[];
+  };
   weatherForecasts: WeatherForecast[];
   isLoading: boolean;
   error: string | null;
@@ -486,62 +492,85 @@ export const useTripStore = () => {
     });
   }, []);
 
-  // Load recommendations for current location
-  const loadRecommendations = useCallback(
-    async (lat?: number, lng?: number) => {
-      if (!lat || !lng) return;
+  // Load OpenAI recommendations for current trip
+  const loadRecommendations = useCallback(async () => {
+    if (!store.currentTrip?.stops || store.currentTrip.stops.length === 0) {
+      console.log("No current trip or stops available for recommendations");
+      return;
+    }
 
-      setStore((prev) => ({ ...prev, isLoading: true, error: null }));
+    setStore((prev) => ({ ...prev, isLoading: true, error: null }));
 
-      try {
-        const response = await apiService.getNearbyRecommendations(lat, lng);
+    try {
+      console.log(`🤖 Loading OpenAI recommendations for trip: ${store.currentTrip.name}`);
+      
+      // Prepare stops data for OpenAI
+      const stopsForRecommendations = store.currentTrip.stops.map(stop => ({
+        id: stop.id.toString(),
+        name: stop.name,
+        lat: stop.lat || stop.latitude,
+        lng: stop.lng || stop.longitude,
+      }));
 
-        const recommendations: Recommendation[] = response.results.map(
-          (place) => ({
-            id: place.place_id,
-            name: place.name,
-            type: place.types.includes("restaurant")
-              ? ("restaurant" as const)
-              : place.types.includes("lodging")
-              ? ("accommodation" as const)
-              : ("attraction" as const),
-            rating: place.rating,
-            distance: `${(Math.random() * 5 + 0.5).toFixed(1)} mi`, // Mock distance
-            duration: place.types.includes("lodging")
-              ? "Overnight"
-              : place.types.includes("restaurant")
-              ? "1-2 hrs"
-              : "2-3 hrs",
-            description: `Highly rated ${place.name.toLowerCase()} in the area.`,
-            imageUrl: `https://images.unsplash.com/photo-${
-              1500000000000 + Math.floor(Math.random() * 100000000)
-            }?w=300&q=80`,
-            tags: place.types
-              .slice(0, 3)
-              .map((type) =>
-                type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
-              ),
-            lat: place.latitude || place.geometry?.location?.lat || 0,
-            lng: place.longitude || place.geometry?.location?.lng || 0,
-            priceLevel: place.price_level,
-          })
-        );
+      // Get recommendations from OpenAI for all stops
+      const openaiRecommendations = await openaiService.getRecommendationsForTrip(stopsForRecommendations);
 
-        setStore((prev) => ({
-          ...prev,
-          recommendations,
-          isLoading: false,
-        }));
-      } catch (error) {
-        setStore((prev) => ({
-          ...prev,
-          error: "Failed to load recommendations",
-          isLoading: false,
-        }));
-      }
-    },
-    []
-  );
+      // Convert OpenAI recommendations to the existing Recommendation format
+      const convertToRecommendation = (openaiRec: OpenAIRecommendation): Recommendation => ({
+        id: openaiRec.id,
+        name: openaiRec.name,
+        type: openaiRec.type,
+        rating: openaiRec.rating || 4.0,
+        distance: `${(Math.random() * 5 + 0.5).toFixed(1)} mi`, // Mock distance for now
+        duration: openaiRec.type === 'accommodation' ? 'Overnight' : 
+                 openaiRec.type === 'restaurant' ? '1-2 hrs' : '2-3 hrs',
+        description: openaiRec.description,
+        imageUrl: openaiRec.imageUrl || `https://picsum.photos/300/200?random=${openaiRec.id}`,
+        tags: openaiRec.tags,
+        lat: openaiRec.lat || 0,
+        lng: openaiRec.lng || 0,
+        priceLevel: openaiRec.priceLevel,
+        openingHours: openaiRec.openingHours,
+        phone: openaiRec.phone,
+        website: openaiRec.website,
+        address: openaiRec.address,
+      });
+
+      // Combine all recommendations
+      const allRecommendations: Recommendation[] = [
+        ...openaiRecommendations.restaurants.map(convertToRecommendation),
+        ...openaiRecommendations.attractions.map(convertToRecommendation),
+        ...openaiRecommendations.accommodations.map(convertToRecommendation),
+      ];
+
+      // Store the categorized recommendations for the RecommendationsPanel
+      setStore((prev) => ({
+        ...prev,
+        recommendations: allRecommendations,
+        // Store categorized recommendations for easy access
+        categorizedRecommendations: {
+          restaurants: openaiRecommendations.restaurants.map(convertToRecommendation),
+          attractions: openaiRecommendations.attractions.map(convertToRecommendation),
+          accommodations: openaiRecommendations.accommodations.map(convertToRecommendation),
+        },
+        isLoading: false,
+      }));
+
+      console.log(`✅ Loaded ${allRecommendations.length} total recommendations:`, {
+        restaurants: openaiRecommendations.restaurants.length,
+        attractions: openaiRecommendations.attractions.length,
+        accommodations: openaiRecommendations.accommodations.length,
+      });
+
+    } catch (error: any) {
+      console.error("❌ Failed to load OpenAI recommendations:", error);
+      setStore((prev) => ({
+        ...prev,
+        error: error.message || "Failed to load recommendations",
+        isLoading: false,
+      }));
+    }
+  }, [store.currentTrip]);
 
   // Load weather forecasts
   const loadWeatherForecasts = useCallback(async () => {

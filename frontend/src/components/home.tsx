@@ -55,18 +55,12 @@ export default function Home() {
       console.log('Home: Current trip changed, loading data for:', tripStore.currentTrip.name);
       tripStore.loadWeatherForecasts();
       
-      // Load recommendations based on the last stop or first stop if available
+      // Load OpenAI recommendations for all stops in the current trip
       if (tripStore.currentTrip.stops && tripStore.currentTrip.stops.length > 0) {
-        const lastStop = tripStore.currentTrip.stops[tripStore.currentTrip.stops.length - 1];
-        if (lastStop.lat && lastStop.lng) {
-          console.log('Home: Loading recommendations for last stop:', lastStop.name);
-          tripStore.loadRecommendations(lastStop.lat, lastStop.lng);
-        }
+        console.log('Home: Loading OpenAI recommendations for all stops in trip:', tripStore.currentTrip.name);
+        tripStore.loadRecommendations();
       } else {
-        // If no stops, try to load recommendations for a default location (Kenya)
-        console.log('Home: No stops in current trip, loading general recommendations for Kenya');
-        // Load recommendations for Nairobi, Kenya as default location
-        tripStore.loadRecommendations(-1.2921, 36.8219);
+        console.log('Home: No stops in current trip, skipping recommendations');
       }
     }
   }, [tripStore.currentTrip?.id, tripStore.currentTrip?.stops?.length]);
@@ -306,18 +300,12 @@ export default function Home() {
           className="w-[350px] border-l overflow-y-auto flex-shrink-0 bg-background"
         >
           <RecommendationsPanel
-            selectedStops={
-              tripStore.currentTrip?.stops?.map((stop) => ({
-                id: stop.id.toString(),
-                name: stop.name,
-                lat: stop.lat || stop.latitude || 0,
-                lng: stop.lng || stop.longitude || 0,
-              })) || []
-            }
+            recommendations={tripStore.categorizedRecommendations}
+            isLoading={tripStore.isLoading}
             onAddToTrip={(rec) =>
               tripStore.addStop({
                 name: rec.name,
-                address: rec.description,
+                address: rec.address || rec.description,
                 lat: rec.lat,
                 lng: rec.lng,
               })
