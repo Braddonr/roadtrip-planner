@@ -45,6 +45,21 @@ class Trip(models.Model):
         help_text="Fuel price per gallon in USD"
     )
     
+    # Vehicle information
+    vehicle_make = models.CharField(max_length=100, blank=True, help_text="Vehicle make (e.g., Toyota)")
+    vehicle_model = models.CharField(max_length=100, blank=True, help_text="Vehicle model (e.g., Camry)")
+    vehicle_year = models.CharField(max_length=4, blank=True, help_text="Vehicle year")
+    
+    # Route visualization data
+    route_geometry = models.TextField(
+        blank=True,
+        help_text="Encoded polyline route geometry from Mapbox"
+    )
+    route_bounds = models.JSONField(
+        null=True, blank=True,
+        help_text="Route bounding box for map fitting"
+    )
+    
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
