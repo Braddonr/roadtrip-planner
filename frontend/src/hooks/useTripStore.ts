@@ -30,10 +30,39 @@ export const useTripStore = () => {
       const trips = response.results || response;
       console.log("This are the trips we have:", trips);
 
-      // Ensure all trips have stops arrays initialized
+      // Transform backend trips to frontend format
       const tripsWithStops = trips.map((trip: any) => ({
-        ...trip,
+        id: trip.id,
+        name: trip.name,
+        description: trip.description,
+        route_type: trip.route_type,
+        user_name: trip.user_name,
+        total_distance: trip.total_distance,
+        total_time: trip.total_time,
+        estimated_fuel_cost: trip.estimated_fuel_cost,
+        start_date: trip.start_date,
+        end_date: trip.end_date,
+        duration_days: trip.duration_days,
         stops: trip.stops || [], // Initialize empty stops array if not present
+        stops_count: trip.stops_count,
+        is_public: trip.is_public,
+        fuel_efficiency: trip.fuel_efficiency,
+        fuel_price_per_gallon: trip.fuel_price_per_gallon,
+        vehicle_make: trip.vehicle_make,
+        vehicle_model: trip.vehicle_model,
+        vehicle_year: trip.vehicle_year,
+        created_at: trip.created_at,
+        updated_at: trip.updated_at,
+        // Legacy properties for backward compatibility
+        routeType: trip.route_type,
+        totalDistance: trip.total_distance,
+        totalTime: trip.total_time,
+        estimatedFuelCost: trip.estimated_fuel_cost,
+        startDate: trip.start_date ? new Date(trip.start_date) : undefined,
+        endDate: trip.end_date ? new Date(trip.end_date) : undefined,
+        createdAt: new Date(trip.created_at),
+        updatedAt: new Date(trip.updated_at),
+        stopsCount: trip.stops_count,
       }));
 
       setStore((prev) => ({
@@ -118,9 +147,9 @@ export const useTripStore = () => {
         setStore((prev) => ({
           ...prev,
           allTrips: prev.allTrips.map(trip => 
-            trip.id === tripId ? tripWithStops : trip
+            trip.id === parseInt(tripId) ? tripWithStops : trip
           ),
-          currentTrip: prev.currentTrip?.id === tripId ? tripWithStops : prev.currentTrip,
+          currentTrip: prev.currentTrip?.id === parseInt(tripId) ? tripWithStops : prev.currentTrip,
           isLoading: false,
         }));
 
@@ -144,20 +173,20 @@ export const useTripStore = () => {
 
       try {
         // Find the trip to get its name for the toast
-        const tripToDelete = store.allTrips.find(trip => trip.id === tripId);
+        const tripToDelete = store.allTrips.find(trip => trip.id === parseInt(tripId));
         const tripName = tripToDelete?.name || 'Trip';
 
         // Convert string ID to number for API call
         await apiService.deleteTrip(parseInt(tripId), tripName);
 
         setStore((prev) => {
-          const updatedTrips = prev.allTrips.filter(trip => trip.id !== tripId);
+          const updatedTrips = prev.allTrips.filter(trip => trip.id !== parseInt(tripId));
           
           return {
             ...prev,
             allTrips: updatedTrips,
             // If the deleted trip was the current trip, set a new current trip
-            currentTrip: prev.currentTrip?.id === tripId 
+            currentTrip: prev.currentTrip?.id === parseInt(tripId) 
               ? (updatedTrips.length > 0 ? updatedTrips[0] : null)
               : prev.currentTrip,
             isLoading: false,
@@ -192,13 +221,13 @@ export const useTripStore = () => {
 
       try {
         const newStop = await apiService.addStopToTrip(
-          parseInt(store.currentTrip.id),
+          store.currentTrip.id,
           {
             name: stop.name,
             address: stop.address,
-            latitude: stop.lat || 0,
-            longitude: stop.lng || 0,
-            stop_type: stop.type || "waypoint",
+            latitude: stop.latitude || stop.lat || 0,
+            longitude: stop.longitude || stop.lng || 0,
+            stop_type: stop.stop_type || stop.type || "waypoint",
           }
         );
 
@@ -207,20 +236,39 @@ export const useTripStore = () => {
           if (!prev.currentTrip) return prev;
 
           const currentStops = prev.currentTrip.stops || [];
+          const newStopFormatted = {
+            id: newStop.id,
+            name: newStop.name,
+            address: newStop.address,
+            latitude: newStop.latitude,
+            longitude: newStop.longitude,
+            coordinates: [newStop.longitude, newStop.latitude] as [number, number],
+            place_id: newStop.place_id || "",
+            stop_type: newStop.stop_type as "start" | "waypoint" | "destination",
+            order: newStop.order,
+            arrival_time: newStop.arrival_time,
+            departure_time: newStop.departure_time,
+            duration_minutes: newStop.duration_minutes,
+            travel_time_to_next: newStop.travel_time_to_next,
+            travel_distance_to_next: newStop.travel_distance_to_next,
+            notes: newStop.notes || "",
+            estimated_cost: newStop.estimated_cost,
+            created_at: newStop.created_at,
+            updated_at: newStop.updated_at,
+            // Legacy properties for backward compatibility
+            lat: newStop.latitude,
+            lng: newStop.longitude,
+            type: newStop.stop_type as "start" | "destination" | "waypoint",
+            arrivalTime: newStop.arrival_time,
+            departureTime: newStop.departure_time,
+            travelTime: newStop.travel_time_to_next ? `${newStop.travel_time_to_next}h` : undefined,
+            travelDistance: newStop.travel_distance_to_next ? `${newStop.travel_distance_to_next} miles` : undefined,
+          };
+
           const updatedTrip = {
             ...prev.currentTrip,
-            stops: [
-              ...currentStops,
-              {
-                id: newStop.id.toString(),
-                name: newStop.name,
-                address: newStop.address,
-                lat: newStop.latitude,
-                lng: newStop.longitude,
-                type: newStop.stop_type as any,
-                order: newStop.order,
-              },
-            ],
+            stops: [...currentStops, newStopFormatted],
+            updated_at: new Date().toISOString(),
             updatedAt: new Date(),
           };
 
@@ -250,7 +298,7 @@ export const useTripStore = () => {
 
       try {
         await apiService.removeStopFromTrip(
-          parseInt(store.currentTrip.id),
+          store.currentTrip.id,
           parseInt(stopId)
         );
 
@@ -261,7 +309,8 @@ export const useTripStore = () => {
           const currentStops = prev.currentTrip.stops || [];
           const updatedTrip = {
             ...prev.currentTrip,
-            stops: currentStops.filter((stop) => stop.id !== stopId),
+            stops: currentStops.filter((stop) => stop.id !== parseInt(stopId)),
+            updated_at: new Date().toISOString(),
             updatedAt: new Date(),
           };
 
@@ -292,12 +341,12 @@ export const useTripStore = () => {
       try {
         // Create the stop orders array for the backend
         const stopOrders = newStops.map((stop, index) => ({
-          id: parseInt(stop.id),
+          id: typeof stop.id === 'string' ? parseInt(stop.id) : stop.id,
           order: index + 1,
         }));
 
         await apiService.reorderStops(
-          parseInt(store.currentTrip.id),
+          store.currentTrip.id,
           stopOrders
         );
 

@@ -75,8 +75,8 @@ interface InteractiveMapProps {
 
 const InteractiveMap: React.FC<InteractiveMapProps> = ({
   waypoints = [
-    { id: "1", name: "Starting Point", lat: 40.7128, lng: -74.006 },
-    { id: "2", name: "Destination", lat: 34.0522, lng: -118.2437 },
+    { id: "1", name: "Nairobi", lat: -1.2921, lng: 36.8219 },
+    { id: "2", name: "Mombasa", lat: -4.0435, lng: 39.6682 },
   ],
   selectedRouteType = "fastest",
   searchResults = [],
@@ -112,7 +112,10 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
   // Handle editing trip - open modal when editingTrip prop changes
   useEffect(() => {
     if (editingTrip) {
-      console.log("InteractiveMap: Opening TripCreationModal for editing:", editingTrip.name);
+      console.log(
+        "InteractiveMap: Opening TripCreationModal for editing:",
+        editingTrip.name
+      );
       setIsTripModalOpen(true);
     }
   }, [editingTrip]);
@@ -330,17 +333,27 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
       const validLat = isNaN(mapCenter.lat) ? -1.2921 : mapCenter.lat; // Default to Nairobi
       const validZoom = isNaN(zoom) || zoom < 1 ? 10 : Math.min(zoom, 20);
 
-      // Let's test with a very basic Mapbox URL first
-      const testUrl = `https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/${validLng},${validLat},${validZoom}/800x600?access_token=pk.eyJ1IjoiYnJhZGQ5OCIsImEiOiJjbWRtemU1Nm0xamNlMmlyejZoYTh3dzVtIn0.DeVlSe1eIBvCf_SWVPbanA`;
+      // Use mapbox service to generate the static map URL
+      const center: [number, number] = focusedLocation
+        ? [focusedLocation.lng, focusedLocation.lat]
+        : [validLng, validLat];
 
-      // If we have a focused location, center on it
-      if (focusedLocation) {
-        const focusedUrl = `https://api.mapbox.com/styles/v1/mapbox/${mapType}/static/${focusedLocation.lng},${focusedLocation.lat},${validZoom}/800x600?access_token=pk.eyJ1IjoiYnJhZGQ5OCIsImEiOiJjbWRtemU1Nm0xamNlMmlyejZoYTh3dzVtIn0.DeVlSe1eIBvCf_SWVPbanA`;
-        return focusedUrl;
-      }
+      const mapUrl = mapboxService.getStaticMapUrl({
+        center,
+        zoom: validZoom,
+        width: 800,
+        height: 600,
+        markers,
+        style: mapType as any,
+        path: routePath.length > 1 ? routePath : undefined,
+      });
 
-      // Otherwise use the simple test URL
-      return testUrl;
+      console.log('Generated map URL:', mapUrl);
+      console.log('Map center:', center);
+      console.log('Markers:', markers);
+      console.log('Route path:', routePath);
+
+      return mapUrl;
     } catch (error) {
       console.error("Error generating map URL:", error);
       // Return a fallback URL or empty string

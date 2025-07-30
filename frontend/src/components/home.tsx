@@ -217,10 +217,10 @@ export default function Home() {
           <InteractiveMap
             waypoints={
               tripStore.currentTrip?.stops?.map((stop) => ({
-                id: stop.id,
+                id: stop.id.toString(),
                 name: stop.name,
-                lat: stop.lat || 0,
-                lng: stop.lng || 0,
+                lat: stop.lat || stop.latitude || 0,
+                lng: stop.lng || stop.longitude || 0,
               })) || []
             }
             selectedRouteType={tripStore.currentTrip?.routeType || "fastest"}
@@ -265,7 +265,7 @@ export default function Home() {
               } else {
                 // If no current trip, show a message or create a new trip
                 console.log('No current trip selected. Please select or create a trip first.');
-                alert('Please select or create a trip first before adding markers.');
+                // alert('Please select or create a trip first before adding markers.');
               }
             }}
           />
@@ -306,12 +306,14 @@ export default function Home() {
           className="w-[350px] border-l overflow-y-auto flex-shrink-0 bg-background"
         >
           <RecommendationsPanel
-            selectedStop={
-              tripStore.currentTrip?.stops && tripStore.currentTrip.stops.length > 0
-                ? tripStore.currentTrip.stops[tripStore.currentTrip.stops.length - 1]?.name || "Current Location"
-                : tripStore.currentTrip?.name || "Current Location"
+            selectedStops={
+              tripStore.currentTrip?.stops?.map((stop) => ({
+                id: stop.id.toString(),
+                name: stop.name,
+                lat: stop.lat || stop.latitude || 0,
+                lng: stop.lng || stop.longitude || 0,
+              })) || []
             }
-            recommendations={tripStore.recommendations}
             onAddToTrip={(rec) =>
               tripStore.addStop({
                 name: rec.name,
@@ -320,9 +322,6 @@ export default function Home() {
                 lng: rec.lng,
               })
             }
-            isLoading={tripStore.isLoading}
-            currentTrip={tripStore.currentTrip}
-            onLoadRecommendations={(lat, lng) => tripStore.loadRecommendations(lat, lng)}
           />
         </motion.div>
       </div>
@@ -335,22 +334,8 @@ export default function Home() {
         className="h-[150px] border-t flex-shrink-0 bg-background"
       >
         <TripDetailsDashboard
-          totalDistance={tripStore.currentTrip?.totalDistance || 0}
-          totalTime={tripStore.currentTrip?.totalTime || 0}
-          estimatedFuelCost={tripStore.currentTrip?.estimatedFuelCost || 0}
+          selectedTrip={tripStore.currentTrip}
           weatherForecasts={tripStore.weatherForecasts}
-          completionPercentage={
-            // Calculate completion based on trip data
-            tripStore.currentTrip ? 
-              Math.min(100, 
-                (tripStore.currentTrip.stops?.length || 0) * 20 + // 20% per stop (up to 5 stops = 100%)
-                (tripStore.currentTrip.startDate ? 15 : 0) + // 15% for start date
-                (tripStore.currentTrip.endDate ? 15 : 0) + // 15% for end date
-                (tripStore.currentTrip.totalDistance > 0 ? 10 : 0) // 10% for route calculation
-              ) : 0
-          }
-          startDate={tripStore.currentTrip?.startDate}
-          endDate={tripStore.currentTrip?.endDate}
           onSave={() => console.log("Saving trip...", tripStore.currentTrip)}
           onShare={() => console.log("Sharing trip...", tripStore.currentTrip)}
         />

@@ -1,7 +1,6 @@
 // Mapbox API service for maps and geocoding
-const MAPBOX_ACCESS_TOKEN =
-  import.meta.env.VITE_MAPBOX_ACCESS_TOKEN ||
-  "pk.eyJ1IjoiYnJhZGQ5OCIsImEiOiJjbWRtemU1Nm0xamNlMmlyejZoYTh3dzVtIn0.DeVlSe1eIBvCf_SWVPbanA";
+const MAPBOX_ACCESS_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+
 const MAPBOX_BASE_URL = "https://api.mapbox.com";
 
 export interface MapboxPlace {
@@ -67,6 +66,21 @@ export interface MapboxDirectionsResponse {
 class MapboxService {
   private accessToken = MAPBOX_ACCESS_TOKEN;
   private baseUrl = MAPBOX_BASE_URL;
+
+  constructor() {
+    // Debug logging to help identify token issues
+    if (!this.accessToken) {
+      console.error("❌ Mapbox access token is not defined!");
+      console.log("Environment variables:", {
+        VITE_MAPBOX_ACCESS_TOKEN: import.meta.env.VITE_MAPBOX_ACCESS_TOKEN,
+        NODE_ENV: import.meta.env.NODE_ENV,
+        MODE: import.meta.env.MODE,
+      });
+    } else {
+      console.log("✅ Mapbox access token loaded successfully");
+      console.log("Token preview:", this.accessToken.substring(0, 20) + "...");
+    }
+  }
 
   // Search for places using Mapbox Geocoding API
   async searchPlaces(
@@ -184,19 +198,19 @@ class MapboxService {
     if (options?.alternatives !== undefined) {
       params.append("alternatives", options.alternatives.toString());
     }
-    
+
     if (options?.continue_straight !== undefined) {
       params.append("continue_straight", options.continue_straight.toString());
     }
-    
+
     if (options?.waypoint_snapping) {
       params.append("waypoint_snapping", options.waypoint_snapping);
     }
-    
+
     if (options?.approaches && options.approaches.length > 0) {
       params.append("approaches", options.approaches.join(";"));
     }
-    
+
     if (options?.annotations && options.annotations.length > 0) {
       params.append("annotations", options.annotations.join(","));
     }
@@ -263,12 +277,14 @@ class MapboxService {
       const color = marker.color || "red";
       const size = marker.size || "medium";
       const label = marker.label || (index + 1).toString();
-      
+
       // Get size abbreviation for Mapbox API
-      const sizeAbbr = size === 'small' ? 's' : size === 'large' ? 'l' : 'm';
-      
+      const sizeAbbr = size === "small" ? "s" : size === "large" ? "l" : "m";
+
       // Ensure label is URL-safe (only alphanumeric characters)
-      const safeLabel = label.replace(/[^a-zA-Z0-9]/g, '').substring(0, 1) || (index + 1).toString();
+      const safeLabel =
+        label.replace(/[^a-zA-Z0-9]/g, "").substring(0, 1) ||
+        (index + 1).toString();
 
       overlays.push(
         `pin-${sizeAbbr}-${safeLabel}+${color}(${marker.coordinates.join(",")})`
@@ -326,14 +342,17 @@ class MapboxService {
   }> {
     // Note: You'll need to add OpenWeatherMap API key to your environment
     const OPENWEATHER_API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY;
-    
+
     if (!OPENWEATHER_API_KEY) {
       // Return mock data if no API key is provided
       return {
-        location: locationName || `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+        location:
+          locationName || `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
         temperature: 25 + Math.random() * 10,
-        condition: ['Sunny', 'Partly Cloudy', 'Cloudy', 'Rainy'][Math.floor(Math.random() * 4)],
-        icon: 'sun',
+        condition: ["Sunny", "Partly Cloudy", "Cloudy", "Rainy"][
+          Math.floor(Math.random() * 4)
+        ],
+        icon: "sun",
         humidity: 60 + Math.random() * 20,
         windSpeed: 5 + Math.random() * 10,
         date: new Date(),
@@ -352,7 +371,10 @@ class MapboxService {
       const data = await response.json();
 
       return {
-        location: locationName || data.name || `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+        location:
+          locationName ||
+          data.name ||
+          `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
         temperature: Math.round(data.main.temp),
         condition: data.weather[0].description,
         icon: data.weather[0].icon,
@@ -361,13 +383,14 @@ class MapboxService {
         date: new Date(),
       };
     } catch (error) {
-      console.error('Weather API error:', error);
+      console.error("Weather API error:", error);
       // Return mock data as fallback
       return {
-        location: locationName || `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+        location:
+          locationName || `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
         temperature: 25,
-        condition: 'Unknown',
-        icon: 'sun',
+        condition: "Unknown",
+        icon: "sun",
         humidity: 65,
         windSpeed: 8,
         date: new Date(),
@@ -379,76 +402,90 @@ class MapboxService {
   async searchPOI(
     latitude: number,
     longitude: number,
-    type: 'restaurant' | 'attraction' | 'accommodation',
+    type: "restaurant" | "attraction" | "accommodation",
     options?: {
       radius?: number; // in meters, default 5000
       limit?: number; // default 10
     }
-  ): Promise<Array<{
-    id: string;
-    name: string;
-    type: 'restaurant' | 'attraction' | 'accommodation';
-    rating?: number;
-    distance: string;
-    duration: string;
-    description: string;
-    imageUrl: string;
-    tags: string[];
-    lat: number;
-    lng: number;
-    priceLevel?: number;
-    openingHours?: string[];
-    address: string;
-  }>> {
+  ): Promise<
+    Array<{
+      id: string;
+      name: string;
+      type: "restaurant" | "attraction" | "accommodation";
+      rating?: number;
+      distance: string;
+      duration: string;
+      description: string;
+      imageUrl: string;
+      tags: string[];
+      lat: number;
+      lng: number;
+      priceLevel?: number;
+      openingHours?: string[];
+      address: string;
+    }>
+  > {
     const radius = options?.radius || 5000; // 5km default
     const limit = options?.limit || 10;
 
     // Map our types to Mapbox POI categories
     const categoryMap = {
-      restaurant: ['restaurant', 'food_and_drink', 'cafe'],
-      attraction: ['tourist_attraction', 'museum', 'park', 'entertainment'],
-      accommodation: ['accommodation', 'hotel', 'lodging']
+      restaurant: ["restaurant", "food_and_drink", "cafe"],
+      attraction: ["tourist_attraction", "museum", "park", "entertainment"],
+      accommodation: ["accommodation", "hotel", "lodging"],
     };
 
     const categories = categoryMap[type];
-    
+
     try {
       // Use Mapbox Places API to search for POIs
       const bbox = this.calculateBoundingBox(latitude, longitude, radius);
-      
+
       const results = [];
-      
+
       // Search for each category
       for (const category of categories) {
         try {
-          const searchResponse = await this.searchPlaces('', {
+          const searchResponse = await this.searchPlaces("", {
             limit: Math.ceil(limit / categories.length),
             bbox,
             types: [category],
-            proximity: [longitude, latitude]
+            proximity: [longitude, latitude],
           });
 
           if (searchResponse.features) {
             for (const feature of searchResponse.features) {
               const [lng, lat] = feature.center;
-              const distance = this.calculateDistance(latitude, longitude, lat, lng);
-              
+              const distance = this.calculateDistance(
+                latitude,
+                longitude,
+                lat,
+                lng
+              );
+
               if (distance <= radius) {
                 results.push({
                   id: feature.id,
                   name: feature.text,
                   type,
                   rating: 4 + Math.random(), // Mock rating, you'd get this from a reviews API
-                  distance: distance < 1000 ? `${Math.round(distance)}m` : `${(distance / 1000).toFixed(1)}km`,
+                  distance:
+                    distance < 1000
+                      ? `${Math.round(distance)}m`
+                      : `${(distance / 1000).toFixed(1)}km`,
                   duration: `${Math.round(distance / 83)}min`, // Walking speed ~5km/h = 83m/min
-                  description: feature.properties?.category || `${type} in ${feature.context?.[0]?.text || 'the area'}`,
-                  imageUrl: `https://via.placeholder.com/300x200?text=${encodeURIComponent(feature.text)}`, // Mock image
+                  description:
+                    feature.properties?.category ||
+                    `${type} in ${feature.context?.[0]?.text || "the area"}`,
+                  imageUrl: `https://via.placeholder.com/300x200?text=${encodeURIComponent(
+                    feature.text
+                  )}`, // Mock image
                   tags: feature.place_type || [],
                   lat,
                   lng,
                   priceLevel: Math.floor(Math.random() * 4) + 1, // Mock price level 1-4
-                  openingHours: ['9:00 AM - 10:00 PM'], // Mock hours
-                  address: feature.place_name
+                  openingHours: ["9:00 AM - 10:00 PM"], // Mock hours
+                  address: feature.place_name,
                 });
               }
             }
@@ -462,52 +499,92 @@ class MapboxService {
       return results
         .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
         .slice(0, limit);
-
     } catch (error) {
-      console.error('POI search error:', error);
+      console.error("POI search error:", error);
       // Return mock data as fallback
       return this.generateMockPOI(latitude, longitude, type, limit);
     }
   }
 
   // Helper function to calculate bounding box for a radius
-  private calculateBoundingBox(lat: number, lng: number, radiusMeters: number): [number, number, number, number] {
+  private calculateBoundingBox(
+    lat: number,
+    lng: number,
+    radiusMeters: number
+  ): [number, number, number, number] {
     const radiusDegrees = radiusMeters / 111320; // Rough conversion: 1 degree ≈ 111.32 km
     return [
       lng - radiusDegrees, // minX
       lat - radiusDegrees, // minY
       lng + radiusDegrees, // maxX
-      lat + radiusDegrees  // maxY
+      lat + radiusDegrees, // maxY
     ];
   }
 
   // Helper function to calculate distance between two points
-  private calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  private calculateDistance(
+    lat1: number,
+    lng1: number,
+    lat2: number,
+    lng2: number
+  ): number {
     const R = 6371000; // Earth's radius in meters
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLng = (lng2 - lng1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLng/2) * Math.sin(dLng/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLng = ((lng2 - lng1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }
 
   // Generate mock POI data as fallback
-  private generateMockPOI(lat: number, lng: number, type: 'restaurant' | 'attraction' | 'accommodation', limit: number) {
+  private generateMockPOI(
+    lat: number,
+    lng: number,
+    type: "restaurant" | "attraction" | "accommodation",
+    limit: number
+  ) {
     const mockData = {
       restaurant: [
-        'Local Bistro', 'Pizza Corner', 'Sushi House', 'Coffee Shop', 'Street Food Market',
-        'Fine Dining', 'Burger Joint', 'Vegetarian Delight', 'Seafood Restaurant', 'BBQ Grill'
+        "Local Bistro",
+        "Pizza Corner",
+        "Sushi House",
+        "Coffee Shop",
+        "Street Food Market",
+        "Fine Dining",
+        "Burger Joint",
+        "Vegetarian Delight",
+        "Seafood Restaurant",
+        "BBQ Grill",
       ],
       attraction: [
-        'City Museum', 'Historic Monument', 'Art Gallery', 'Central Park', 'Observation Deck',
-        'Cultural Center', 'Zoo', 'Botanical Garden', 'Theater', 'Shopping District'
+        "City Museum",
+        "Historic Monument",
+        "Art Gallery",
+        "Central Park",
+        "Observation Deck",
+        "Cultural Center",
+        "Zoo",
+        "Botanical Garden",
+        "Theater",
+        "Shopping District",
       ],
       accommodation: [
-        'Grand Hotel', 'Budget Inn', 'Boutique Lodge', 'Hostel', 'Resort',
-        'Business Hotel', 'Bed & Breakfast', 'Apartment Hotel', 'Luxury Suite', 'Motel'
-      ]
+        "Grand Hotel",
+        "Budget Inn",
+        "Boutique Lodge",
+        "Hostel",
+        "Resort",
+        "Business Hotel",
+        "Bed & Breakfast",
+        "Apartment Hotel",
+        "Luxury Suite",
+        "Motel",
+      ],
     };
 
     return Array.from({ length: Math.min(limit, 10) }, (_, i) => ({
@@ -518,20 +595,22 @@ class MapboxService {
       distance: `${(Math.random() * 2 + 0.1).toFixed(1)}km`,
       duration: `${Math.round(Math.random() * 20 + 5)}min`,
       description: `Popular ${type} in the area`,
-      imageUrl: `https://via.placeholder.com/300x200?text=${encodeURIComponent(mockData[type][i % mockData[type].length])}`,
-      tags: [type, 'popular', 'nearby'],
+      imageUrl: `https://via.placeholder.com/300x200?text=${encodeURIComponent(
+        mockData[type][i % mockData[type].length]
+      )}`,
+      tags: [type, "popular", "nearby"],
       lat: lat + (Math.random() - 0.5) * 0.01,
       lng: lng + (Math.random() - 0.5) * 0.01,
       priceLevel: Math.floor(Math.random() * 4) + 1,
-      openingHours: ['9:00 AM - 10:00 PM'],
-      address: `${Math.floor(Math.random() * 999) + 1} Main Street`
+      openingHours: ["9:00 AM - 10:00 PM"],
+      address: `${Math.floor(Math.random() * 999) + 1} Main Street`,
     }));
   }
 
   // Calculate total trip distance and time from directions
   async calculateTripMetrics(
     coordinates: Array<[number, number]>,
-    routeType: 'fastest' | 'scenic' | 'custom' = 'fastest'
+    routeType: "fastest" | "scenic" | "custom" = "fastest"
   ): Promise<{
     totalDistance: number; // meters
     totalTime: number; // seconds
@@ -545,12 +624,12 @@ class MapboxService {
   }> {
     try {
       const directions = await this.getDirections(coordinates, {
-        profile: routeType === 'fastest' ? 'driving' : 'driving',
+        profile: routeType === "fastest" ? "driving" : "driving",
         steps: true,
       });
 
       if (!directions.routes || directions.routes.length === 0) {
-        throw new Error('No route found');
+        throw new Error("No route found");
       }
 
       const route = directions.routes[0];
@@ -561,7 +640,8 @@ class MapboxService {
       // Assumptions: 10km per liter, $1.5 per liter (adjust based on your region)
       const fuelEfficiency = 10; // km per liter
       const fuelPrice = 1.5; // USD per liter
-      const estimatedFuelCost = (totalDistance / 1000) / fuelEfficiency * fuelPrice;
+      const estimatedFuelCost =
+        (totalDistance / 1000 / fuelEfficiency) * fuelPrice;
 
       // Extract leg information
       const legs = route.legs.map((leg, index) => ({
@@ -578,7 +658,7 @@ class MapboxService {
         legs,
       };
     } catch (error) {
-      console.error('Error calculating trip metrics:', error);
+      console.error("Error calculating trip metrics:", error);
       throw error;
     }
   }
