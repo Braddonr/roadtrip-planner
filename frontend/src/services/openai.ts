@@ -283,7 +283,7 @@ Please provide 3-4 recommendations for each category. Focus on popular, well-rev
     `.trim();
   }
 
-  // Add placeholder image URLs to recommendations
+  // Add category-specific image URLs to recommendations
   private addImageUrls(
     recommendations: any,
     locationName: string
@@ -291,9 +291,12 @@ Please provide 3-4 recommendations for each category. Focus on popular, well-rev
     const addImages = (items: any[], type: string) => {
       return items.map((item, index) => ({
         ...item,
-        imageUrl: `https://picsum.photos/300/200?random=${encodeURIComponent(
-          locationName
-        )}-${type}-${index}`,
+        imageUrl: this.getCategorySpecificImageUrl(
+          type,
+          item.name,
+          locationName,
+          index
+        ),
       }));
     };
 
@@ -305,6 +308,67 @@ Please provide 3-4 recommendations for each category. Focus on popular, well-rev
         "accommodation"
       ),
     };
+  }
+
+  // Generate category-specific image URLs
+  private getCategorySpecificImageUrl(
+    category: string,
+    itemName: string,
+    locationName: string,
+    index: number
+  ): string {
+    // Create a seed based on item name for consistency
+    const seed = encodeURIComponent(
+      itemName.toLowerCase().replace(/[^a-z0-9]/g, "")
+    );
+
+    switch (category) {
+      case "restaurant":
+        // Food-related images from Unsplash
+        const foodImages = [
+          "https://images.unsplash.com/photo-1600891964092-4316c288032e?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Restaurant food
+          "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Pizza
+          "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Pancakes
+          "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Pasta
+          "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Burger
+          "https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Sushi
+          "https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Salad
+          "https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Fine dining
+        ];
+        return foodImages[index % foodImages.length];
+
+      case "attraction":
+        // Tourism and attraction images from Unsplash
+        const attractionImages = [
+          "https://images.unsplash.com/photo-1539650116574-75c0c6d73c6e?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Museum
+          "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Architecture
+          "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Mountain view
+          "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // City skyline
+          "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Nature park
+          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Beach
+          "https://images.unsplash.com/photo-1541963463532-d68292c34d19?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Books/Library
+          "https://images.unsplash.com/photo-1581833971358-2c8b550f87b3?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Monument
+        ];
+        return attractionImages[index % attractionImages.length];
+
+      case "accommodation":
+        // Hotel and accommodation images from Unsplash
+        const hotelImages = [
+          "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Hotel room
+          "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Hotel lobby
+          "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Luxury hotel
+          "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Hotel exterior
+          "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Resort
+          "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Boutique hotel
+          "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Hotel bed
+          "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=300&h=200&fit=crop&crop=center&auto=format&q=80", // Hotel pool
+        ];
+        return hotelImages[index % hotelImages.length];
+
+      default:
+        // Fallback to location-based image
+        return `https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=300&h=200&fit=crop&crop=center&auto=format&q=80&seed=${seed}`;
+    }
   }
 
   // Remove duplicate recommendations based on name similarity

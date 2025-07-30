@@ -125,7 +125,7 @@ const TripDetailsDashboard = ({
       <div className="container mx-auto p-4">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-2xl font-bold">{selectedTrip.name}</h2>
+            <h2 className="text-2xl font-bold">Trip Summary: {selectedTrip.name}</h2>
             {selectedTrip.description && (
               <p className="text-muted-foreground mt-1">{selectedTrip.description}</p>
             )}
@@ -340,7 +340,7 @@ const TripDetailsDashboard = ({
             <CardHeader>
               <CardTitle className="text-lg font-medium flex items-center">
                 <CloudSun className="h-5 w-5 mr-2 text-blue-500" />
-                AI Weather Forecasts
+                Weather Forecasts
                 {tripWeatherData && (
                   <Badge variant="secondary" className="ml-2 text-xs">
                     {tripWeatherData.tripDuration} days
