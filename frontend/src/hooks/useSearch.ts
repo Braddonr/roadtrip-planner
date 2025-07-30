@@ -18,12 +18,16 @@ export const useSearch = () => {
     setError(null);
 
     try {
+      console.log('🔍 Searching for:', query);
+      
       // Try Mapbox API first
       const mapboxResponse = await mapboxService.searchPlaces(query, {
         limit: 10,
         country: 'ke', // Default to Kenya for more accurate local results
         types: ['poi', 'address', 'place'], // Include points of interest, addresses, and places
       });
+      
+      console.log('✅ Mapbox search results:', mapboxResponse.features.length);
       
       // Convert Mapbox results to our SearchResult format
       const searchResults: SearchResult[] = mapboxResponse.features.map(feature => {

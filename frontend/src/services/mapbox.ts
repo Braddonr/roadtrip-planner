@@ -326,6 +326,65 @@ class MapboxService {
     };
   }
 
+  // Enhanced method to get detailed place information for trip stops
+  async getPlaceDetails(coordinates: [number, number]) {
+    try {
+      const [lng, lat] = coordinates;
+      const response = await this.reverseGeocode(lng, lat);
+
+      if (response.features && response.features.length > 0) {
+        const place = response.features[0];
+        return {
+          name: place.text,
+          address: place.place_name,
+          coordinates: [lng, lat] as [number, number],
+          placeType: place.place_type[0] || "place",
+          context: place.context || [],
+        };
+      }
+
+      return {
+        name: `Location ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+        address: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+        coordinates: [lng, lat] as [number, number],
+        placeType: "coordinate",
+        context: [],
+      };
+    } catch (error) {
+      console.error("Error getting place details:", error);
+      const [lng, lat] = coordinates;
+      return {
+        name: `Location ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+        address: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+        coordinates: [lng, lat] as [number, number],
+        placeType: "coordinate",
+        context: [],
+      };
+    }
+  }
+
+  // Create a simple map URL that works reliably
+  getSimpleMapUrl(options: {
+    center: [number, number];
+    zoom: number;
+    width?: number;
+    height?: number;
+    style?: string;
+  }): string {
+    const {
+      center,
+      zoom,
+      width = 800,
+      height = 600,
+      style = "streets-v11",
+    } = options;
+
+    // Simple map without markers to avoid URL length issues
+    return `${this.baseUrl}/styles/v1/mapbox/${style}/static/${center.join(
+      ","
+    )},${zoom}/${width}x${height}?access_token=${this.accessToken}`;
+  }
+
   // Get weather data for a location (using OpenWeatherMap API as Mapbox doesn't have weather)
   async getWeatherForLocation(
     latitude: number,

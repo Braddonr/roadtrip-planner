@@ -333,25 +333,67 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
       const validLat = isNaN(mapCenter.lat) ? -1.2921 : mapCenter.lat; // Default to Nairobi
       const validZoom = isNaN(zoom) || zoom < 1 ? 10 : Math.min(zoom, 20);
 
-      // Use mapbox service to generate the static map URL
-      const center: [number, number] = focusedLocation
-        ? [focusedLocation.lng, focusedLocation.lat]
-        : [validLng, validLat];
+      // Determine map center and zoom based on available data
+      let center: [number, number];
+      let zoomLevel = validZoom;
 
-      const mapUrl = mapboxService.getStaticMapUrl({
+      if (focusedLocation) {
+        // Center on focused location
+        center = [focusedLocation.lng, focusedLocation.lat];
+        zoomLevel = 12;
+      } else if (waypoints.length > 0) {
+        // Center on trip stops
+        const validWaypoints = waypoints.filter(w => w.lat !== 0 && w.lng !== 0);
+        if (validWaypoints.length > 0) {
+          // Calculate center of all waypoints
+          const avgLat = validWaypoints.reduce((sum, w) => sum + w.lat, 0) / validWaypoints.length;
+          const avgLng = validWaypoints.reduce((sum, w) => sum + w.lng, 0) / validWaypoints.length;
+          center = [avgLng, avgLat];
+          
+          // Adjust zoom based on spread of waypoints
+          if (validWaypoints.length > 1) {
+            const latSpread = Math.max(...validWaypoints.map(w => w.lat)) - Math.min(...validWaypoints.map(w => w.lat));
+            const lngSpread = Math.max(...validWaypoints.map(w => w.lng)) - Math.min(...validWaypoints.map(w => w.lng));
+            const maxSpread = Math.max(latSpread, lngSpread);
+            
+            if (maxSpread > 5) zoomLevel = 6;
+            else if (maxSpread > 2) zoomLevel = 8;
+            else if (maxSpread > 1) zoomLevel = 9;
+            else if (maxSpread > 0.5) zoomLevel = 10;
+            else zoomLevel = 11;
+          } else {
+            zoomLevel = 10;
+          }
+        } else {
+          center = [36.8219, -1.2921]; // Default to Nairobi
+          zoomLevel = 10;
+        }
+      } else {
+        // Default to Kenya center
+        center = [36.8219, -1.2921]; // Nairobi
+        zoomLevel = 7;
+      }
+
+      // Ensure valid zoom level
+      zoomLevel = Math.max(1, Math.min(20, zoomLevel));
+
+      // Use simple map URL to avoid loading issues
+      const mapUrl = mapboxService.getSimpleMapUrl({
         center,
-        zoom: validZoom,
+        zoom: zoomLevel,
         width: 800,
         height: 600,
-        markers,
         style: mapType as any,
-        path: routePath.length > 1 ? routePath : undefined,
       });
 
-      console.log('Generated map URL:', mapUrl);
-      console.log('Map center:', center);
-      console.log('Markers:', markers);
-      console.log('Route path:', routePath);
+      console.log('🗺️ Map generated successfully');
+      console.log('📍 Center:', center);
+      console.log('🔍 Zoom:', zoomLevel);
+      console.log('🛣️ Waypoints:', waypoints.length);
+      if (waypoints.length > 0) {
+        console.log('📍 Trip stops:', waypoints.map(w => `${w.name} (${w.lat}, ${w.lng})`));
+      }
+      console.log('🔗 Map URL length:', mapUrl.length);
 
       return mapUrl;
     } catch (error) {
@@ -493,18 +535,20 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             alt="Interactive Map"
             className="w-full h-full object-cover pointer-events-none"
             onLoad={() => {
-              console.log("Map image loaded successfully");
+              console.log("✅ Map image loaded successfully");
               setIsMapLoading(false);
             }}
             onError={(e) => {
-              console.error("Map image failed to load");
+              console.error("❌ Map image failed to load");
               console.error("Failed URL:", getMapUrl());
               setIsMapLoading(false);
-              // Fallback to placeholder if map fails to load
+              // Show fallback immediately
               e.currentTarget.style.display = "none";
-              const fallback = e.currentTarget
-                .nextElementSibling as HTMLElement;
-              if (fallback) fallback.style.display = "flex";
+              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+              if (fallback) {
+                fallback.style.display = "flex";
+                console.log("📍 Showing fallback map with trip stops");
+              }
             }}
           />
 
@@ -554,21 +598,49 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
           </div>
         )}
 
-        {/* Fallback placeholder */}
+        {/* Fallback placeholder with trip information */}
         <div
-          className="absolute inset-0 flex items-center justify-center bg-slate-200"
+          className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-100"
           style={{ display: "none" }}
         >
-          <div className="text-center">
-            <MapIcon className="h-16 w-16 mx-auto text-slate-400" />
-            <p className="mt-2 text-slate-500">Map Loading...</p>
-            <p className="text-sm text-slate-400">Zoom: {zoom}</p>
-            <p className="text-sm text-slate-400">
-              Waypoints: {waypoints.length}
-            </p>
-            <p className="text-sm text-slate-400">
-              Search Results: {searchResults.length}
-            </p>
+          <div className="text-center max-w-md p-6">
+            <MapIcon className="h-16 w-16 mx-auto text-blue-500 mb-4" />
+            <h3 className="text-lg font-semibold text-slate-700 mb-2">Trip Route Map</h3>
+            
+            {waypoints.length > 0 ? (
+              <div className="space-y-3">
+                <p className="text-slate-600">Your selected trip route:</p>
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  {waypoints.map((waypoint, index) => (
+                    <div key={waypoint.id} className="flex items-center gap-3 py-2">
+                      <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                        {index + 1}
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium text-slate-800">{waypoint.name}</p>
+                        <p className="text-xs text-slate-500">
+                          {waypoint.lat.toFixed(4)}, {waypoint.lng.toFixed(4)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="text-xs text-slate-500 space-y-1">
+                  <p>📍 Center: {mapCenter.lat.toFixed(4)}, {mapCenter.lng.toFixed(4)}</p>
+                  <p>🔍 Zoom Level: {zoom}</p>
+                  <p>🗺️ Map Style: {mapType}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-slate-600">No trip selected</p>
+                <p className="text-sm text-slate-500">Select a trip to view its route</p>
+              </div>
+            )}
+            
+            <div className="mt-4 text-xs text-slate-400">
+              Click anywhere on the map to add stops
+            </div>
           </div>
         </div>
 
@@ -623,7 +695,32 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
                       key={result.id}
                       className="text-xs p-2 hover:bg-accent rounded cursor-pointer transition-colors"
                       onClick={() => {
-                        console.log("Search result clicked:", result.name);
+                        console.log("🔍 Search result clicked:", result.name);
+                        console.log("📍 Adding to clicked markers for trip creation");
+                        
+                        // Add to clicked markers for trip creation
+                        const newMarker = {
+                          id: `search-${result.id}`,
+                          name: result.name,
+                          lat: result.lat,
+                          lng: result.lng,
+                          type: "stop" as const,
+                        };
+                        
+                        setClickedMarkers(prev => {
+                          const updated = [...prev, newMarker];
+                          console.log("📍 Total markers for trip:", updated.length);
+                          return updated;
+                        });
+                        
+                        // Focus on the result
+                        setFocusedLocation({
+                          lat: result.lat,
+                          lng: result.lng,
+                          name: result.name
+                        });
+                        
+                        // Call parent callback
                         onSearchResultClick(result);
                       }}
                     >
