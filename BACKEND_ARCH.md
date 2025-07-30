@@ -22,13 +22,13 @@ A comprehensive Django REST API backend for the Road Trip Planner with:
 
 3. **📍 Places Integration**
 
-   - Google Places API integration
+   - Map box API integration
    - Place search and details caching
    - Nearby places discovery
 
 4. **🛣️ Route Calculation**
 
-   - Google Directions API integration
+   - Map box API integration
    - Route caching and optimization
    - Travel time and distance calculation
 
@@ -39,7 +39,7 @@ A comprehensive Django REST API backend for the Road Trip Planner with:
    - Location-based weather data
 
 6. **⭐ Recommendations Engine**
-   - Smart recommendations based on trip context
+   - OPENAPI recommendations based on trip context
    - Nearby attractions, restaurants, accommodations
    - Personalized suggestions
 
